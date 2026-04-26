@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Webinfo{% endblock %}</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 820px;
+            margin: 1.5em auto;
+            padding: 0 1em;
+            line-height: 1.5;
+            color: #222;
+        }
+        h1 { margin-top: 0; }
+        a { color: #0353a4; }
+
+        .topbar {
+            background: #f4f4f4;
+            padding: 0.75em 1em;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1em;
+            flex-wrap: wrap;
+        }
+        .topbar form { margin: 0; }
+        .topbar .meta { display: flex; gap: 1.2em; flex-wrap: wrap; }
+        .topbar .meta strong { color: #111; }
+
+        .tabs {
+            display: flex;
+            gap: 0.25em;
+            margin: 1em 0 1.5em;
+            border-bottom: 1px solid #ddd;
+        }
+        .tabs a {
+            padding: 0.5em 1em;
+            text-decoration: none;
+            color: #555;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+        }
+        .tabs a.active {
+            color: #0353a4;
+            border-bottom-color: #0353a4;
+            font-weight: 600;
+        }
+
+        .messages { margin-bottom: 1em; padding: 0; list-style: none; }
+        .messages li {
+            padding: 0.6em 0.8em;
+            margin-bottom: 0.5em;
+            border-left: 4px solid #888;
+            background: #f7f7f7;
+        }
+        .messages li.success { background: #e6f6ea; border-left-color: #2a8a3f; }
+        .messages li.warning { background: #fff7e6; border-left-color: #cc8800; }
+        .messages li.error   { background: #fdecea; border-left-color: #b00020; color: #7a0014; }
+        .messages li.info    { background: #eaf3fc; border-left-color: #0353a4; }
+
+        form > div { margin-bottom: 1em; }
+        label { display: block; margin-bottom: 0.25em; font-weight: 600; }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 0.5em;
+            font-size: 1em;
+            box-sizing: border-box;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+        }
+        button, .button {
+            padding: 0.5em 1em;
+            font-size: 1em;
+            cursor: pointer;
+            background: #0353a4;
+            color: white;
+            border: 0;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        button:hover, .button:hover { background: #013a75; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #545b62; }
+        button.danger { background: #b00020; }
+        button.danger:hover { background: #80000f; }
+        button[disabled] {
+            background: #c4c4c4;
+            cursor: not-allowed;
+        }
+        .topbar button { background: #555; }
+        .topbar button:hover { background: #333; }
+
+        .puzzle-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1em;
+            margin-bottom: 1em;
+            background: #fff;
+        }
+        .puzzle-card h2 { margin-top: 0; }
+        .puzzle-card .meta { color: #666; font-size: 0.9em; }
+        .puzzle-card .row { display: flex; gap: 0.5em; align-items: stretch; flex-wrap: wrap; }
+        .puzzle-card .row input[type="text"] { flex: 1 1 200px; }
+        .puzzle-card .hints { margin-top: 1em; }
+        .puzzle-card .hint {
+            margin: 0.4em 0;
+            padding: 0.5em 0.75em;
+            background: #f7f7f7;
+            border-radius: 4px;
+        }
+        .puzzle-card .hint.taken { background: #eaf3fc; }
+        .puzzle-card .hint.locked { color: #777; }
+        .puzzle-card .actions { display: flex; gap: 0.5em; align-items: center; flex-wrap: wrap; margin-top: 0.5em; }
+
+        .empty {
+            color: #777;
+            font-style: italic;
+            padding: 1em 0;
+        }
+
+        .finish-banner {
+            background: #fff8e1;
+            border: 2px dashed #cc8800;
+            padding: 1.5em;
+            border-radius: 8px;
+            margin: 1.5em 0;
+            text-align: center;
+        }
+        .finish-banner h2 { margin: 0 0 0.4em; color: #8b5a00; }
+        .finish-banner .placeholder-note {
+            margin-top: 1em;
+            font-size: 0.85em;
+            color: #8b5a00;
+            opacity: 0.7;
+        }
+
+        .history-entry {
+            border-left: 3px solid #2a8a3f;
+            padding: 0.5em 1em;
+            margin-bottom: 1em;
+            background: #fafafa;
+        }
+        .history-entry.skipped { border-left-color: #cc8800; }
+        .history-entry .stamp { color: #777; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    {% block topbar %}{% endblock %}
+
+    {% block tabs %}{% endblock %}
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</body>
+</html>

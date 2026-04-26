@@ -1,0 +1,19 @@
+{% extends 'hunts/play_base.html' %}
+
+{% block content %}
+<h1>Contact</h1>
+
+{% if contacts %}
+    <p>If you're stuck or something is broken, call one of the organizers below.</p>
+    <ul style="list-style: none; padding: 0;">
+        {% for c in contacts %}
+            <li style="padding: 0.6em 0; border-bottom: 1px solid #eee;">
+                <strong>{{ c.name }}</strong> — <a href="tel:{{ c.phone }}">{{ c.phone }}</a>
+                {% if c.note %}<div style="color: #777;">{{ c.note }}</div>{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="empty">No contacts have been listed for this hunt.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,4 @@
+display_id,order,name,arrival_code,password,base_points,prerequisites,solve_message,hint1_text,hint1_cost,hint2_text,hint2_cost,hint3_text,hint3_cost
+P1,1,The Bakery Cipher,ARRIVE-BAKERY,croissant,1,,"Great! Now head to the playground for the next clue.",Think about French breakfast pastries,5,Has a curved shape,10,,
+P2,2,The Park Bench,ARRIVE-PARK,42,2,P1,"Excellent! The next puzzle is hidden under the slide.",A famous number from sci-fi,5,,,,,
+P3,,The Final Riddle,ARRIVE-FINAL,euler,3,P1;P2,Congratulations — you have completed the hunt!,A Swiss mathematician,10,,,,,

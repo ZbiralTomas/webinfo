@@ -1,0 +1,29 @@
+{% extends 'hunts/play_base.html' %}
+
+{% block content %}
+<h1>History</h1>
+
+{% if history %}
+    {% for entry in history %}
+        <div class="history-entry {% if entry.status == 'skipped' %}skipped{% endif %}">
+            <div>
+                <strong>{{ entry.attempt.puzzle.display_id }} — {{ entry.attempt.puzzle.name }}</strong>
+                <span style="margin-left: 0.5em; color: {% if entry.status == 'skipped' %}#cc8800{% else %}#2a8a3f{% endif %};">
+                    [{{ entry.status }}]
+                </span>
+            </div>
+            <div class="stamp">
+                {{ entry.stamp|date:"Y-m-d H:i" }}
+                {% if entry.duration_minutes is not None %}
+                    · took {{ entry.duration_minutes }} min
+                {% endif %}
+            </div>
+            {% if entry.attempt.puzzle.solve_message %}
+                <div style="margin-top: 0.5em;">{{ entry.attempt.puzzle.solve_message }}</div>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% else %}
+    <p class="empty">Nothing finished yet.</p>
+{% endif %}
+{% endblock %}

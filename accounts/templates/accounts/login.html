@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Login – Webinfo{% endblock %}
+
+{% block content %}
+<h1>Webinfo</h1>
+<p>Log in to your puzzlehunt.</p>
+
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+
+{% if hunts %}
+<form method="post">
+    {% csrf_token %}
+    <div>
+        <label for="puzzlehunt">Puzzlehunt</label>
+        <select name="puzzlehunt" id="puzzlehunt" required>
+            <option value="">— select —</option>
+            {% for hunt in hunts %}
+                <option value="{{ hunt.id }}">{{ hunt.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="name">Team name</label>
+        <input type="text" name="name" id="name" required autofocus>
+    </div>
+    <div>
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+    </div>
+    <button type="submit">Log in</button>
+</form>
+{% else %}
+    <p><em>No active puzzlehunts. Ask the organizer.</em></p>
+{% endif %}
+{% endblock %}

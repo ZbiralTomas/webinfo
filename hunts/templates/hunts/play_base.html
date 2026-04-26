@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ hunt.name }} – {{ team.name }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <div class="meta">
+        <span><strong>{{ team.name }}</strong></span>
+        <span>{{ hunt.name }}</span>
+        <span>Score: <strong>{{ score.value }}</strong> {{ score.unit }}</span>
+        {% if show_total_count %}
+            <span>Solved: <strong>{{ score.solved }}</strong> / {{ score.total }}</span>
+        {% else %}
+            <span>Solved: <strong>{{ score.solved }}</strong></span>
+        {% endif %}
+    </div>
+    <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block tabs %}
+<nav class="tabs">
+    <a href="{% url 'hunts:active' %}"  class="{% if active_tab == 'active' %}active{% endif %}">Active</a>
+    <a href="{% url 'hunts:history' %}" class="{% if active_tab == 'history' %}active{% endif %}">History</a>
+    <a href="{% url 'hunts:contact' %}" class="{% if active_tab == 'contact' %}active{% endif %}">Contact</a>
+</nav>
+{% endblock %}
