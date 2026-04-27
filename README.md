@@ -108,7 +108,7 @@ A *Puzzlehunt* is the container for one event. Fields:
   - **Body (points)** — each solved puzzle awards `base_points` minus
     the cost of any hints revealed on it (floored at 0 per puzzle).
     Skipped puzzles contribute 0. Higher score wins; ties broken by
-    team name.
+    hints used ASC, then team name.
   - **Čas (time)** — score is `elapsed + penalty` minutes, where
     *elapsed* runs from the team's first arrival until either the
     last finish event (when all puzzles are done) or "now". *Penalty*

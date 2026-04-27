@@ -3,7 +3,8 @@
 Read-only helpers that re-derive everything from `PuzzleAttempt` rows; nothing
 is cached or stored. The leaderboard sorting matches what organizers expect:
 
-- POINTS hunts: score DESC, team name ASC.
+- POINTS hunts: score DESC, hints used ASC, team name ASC
+                (hints used is the tiebreaker among teams with the same score).
 - TIME hunts:   solved DESC, total time ASC, hints used ASC, team name ASC
                 (primary metric is # solved, time is the tiebreaker, hints
                 used is the second tiebreaker).
@@ -109,8 +110,8 @@ def leaderboard(hunt: Puzzlehunt) -> list[LeaderboardRow]:
         enriched.append((team, score, hints_used))
 
     if hunt.scoring_type == Puzzlehunt.SCORING_POINTS:
-        # Higher score is better; tiebreak by name.
-        enriched.sort(key=lambda t: (-t[1].value, t[0].name.lower()))
+        # Higher score is better; fewer hints is better; tiebreak by name.
+        enriched.sort(key=lambda t: (-t[1].value, t[2], t[0].name.lower()))
     else:
         # More solved is better; less time is better; fewer hints is better.
         enriched.sort(
