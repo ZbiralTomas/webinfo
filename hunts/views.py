@@ -101,7 +101,7 @@ def arrive_view(request):
     except game.GameError as e:
         messages.error(request, str(e))
     else:
-        messages.success(request, f"Arrived at “{attempt.puzzle.name}”.")
+        messages.success(request, f"Dorazili jste k „{attempt.puzzle.name}“.")
     return redirect("hunts:active")
 
 
@@ -113,19 +113,19 @@ def answer_view(request):
     try:
         result = game.submit_answer(request.team, int(puzzle_id), answer)
     except (TypeError, ValueError):
-        messages.error(request, "Pick a puzzle to answer.")
+        messages.error(request, "Vyber šifru, na kterou chceš odpovědět.")
     except game.GameError as e:
         messages.error(request, str(e))
     else:
         if result.correct:
             messages.success(
                 request,
-                f"Correct on “{result.puzzle.name}”! {result.solve_message}".strip(),
+                f"Správně u „{result.puzzle.name}“! {result.solve_message}".strip(),
             )
         else:
             messages.warning(
                 request,
-                f"That's not right. Wait 1 minute before retrying “{result.puzzle.name}”.",
+                f"To není správně. Počkej 1 minutu, než znovu zkusíš odpovědět na „{result.puzzle.name}“.",
             )
     return redirect("hunts:active")
 
@@ -137,14 +137,14 @@ def hint_view(request):
         puzzle_id = int(request.POST.get("puzzle_id", ""))
         hint_order = int(request.POST.get("hint_order", ""))
     except (TypeError, ValueError):
-        messages.error(request, "Bad hint request.")
+        messages.error(request, "Špatný požadavek na nápovědu.")
         return redirect("hunts:active")
     try:
         hint = game.reveal_hint(request.team, puzzle_id, hint_order)
     except game.GameError as e:
         messages.error(request, str(e))
     else:
-        messages.info(request, f"Hint {hint.order} revealed: {hint.text}")
+        messages.info(request, f"Nápověda {hint.order} odemčena: {hint.text}")
     return redirect("hunts:active")
 
 
@@ -154,14 +154,14 @@ def skip_view(request):
     try:
         puzzle_id = int(request.POST.get("puzzle_id", ""))
     except (TypeError, ValueError):
-        messages.error(request, "Bad skip request.")
+        messages.error(request, "Špatný požadavek na přeskočení.")
         return redirect("hunts:active")
     try:
         attempt = game.skip_puzzle(request.team, puzzle_id)
     except game.GameError as e:
         messages.error(request, str(e))
     else:
-        msg = f"Skipped “{attempt.puzzle.name}”."
+        msg = f"Šifra „{attempt.puzzle.name}“ přeskočena."
         if attempt.puzzle.solve_message:
             msg += " " + attempt.puzzle.solve_message
         messages.success(request, msg)

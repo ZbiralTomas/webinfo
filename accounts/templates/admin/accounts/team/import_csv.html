@@ -2,7 +2,7 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">Home</a>
+    <a href="{% url 'admin:index' %}">Domů</a>
     &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
     &rsaquo; <a href="{% url 'admin:accounts_team_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
     &rsaquo; Import CSV
@@ -10,17 +10,17 @@
 {% endblock %}
 
 {% block content %}
-<h1>Import teams from CSV</h1>
+<h1>Import týmů ze souboru CSV</h1>
 
 <p>
-    Upload a CSV file with one team per row. Required columns:
-    <code>name</code> and <code>password</code>. Passwords are read in
-    plaintext and hashed on save — delete the source file after import.
+    Nahraj soubor CSV s jedním týmem na řádek. Povinné sloupce:
+    <code>name</code> a <code>password</code>. Hesla se načítají v
+    nezašifrované podobě a při uložení se hashují — zdrojový soubor po importu smaž.
 </p>
 <p>
-    Comma-delimited and semicolon-delimited files are both accepted.
-    Existing teams in the chosen hunt are kept; the new rows are added
-    on top. If <em>any</em> row fails validation, nothing is imported.
+    Akceptují se soubory oddělené čárkou i středníkem.
+    Existující týmy ve vybrané šifrovačce zůstanou zachované; nové řádky
+    se přidají. Pokud <em>jakýkoli</em> řádek neprojde validací, nic se nenaimportuje.
 </p>
 
 {% if errors %}
@@ -35,22 +35,22 @@
     {% csrf_token %}
     <fieldset class="module aligned">
         <div class="form-row">
-            <label for="id_puzzlehunt" class="required">Puzzlehunt:</label>
+            <label for="id_puzzlehunt" class="required">Šifrovačka:</label>
             <select id="id_puzzlehunt" name="puzzlehunt" required>
-                <option value="">— select a hunt —</option>
+                <option value="">— vyber šifrovačku —</option>
                 {% for hunt in hunts %}
                     <option value="{{ hunt.id }}">{{ hunt.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-row">
-            <label for="id_csv_file" class="required">CSV file:</label>
+            <label for="id_csv_file" class="required">Soubor CSV:</label>
             <input type="file" id="id_csv_file" name="csv_file" accept=".csv,text/csv" required>
         </div>
     </fieldset>
     <div class="submit-row">
-        <input type="submit" value="Import" class="default">
-        <a href="{% url 'admin:accounts_team_changelist' %}" class="button cancel-link">Cancel</a>
+        <input type="submit" value="Importovat" class="default">
+        <a href="{% url 'admin:accounts_team_changelist' %}" class="button cancel-link">Zrušit</a>
     </div>
 </form>
 {% endblock %}

@@ -1,0 +1,87 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Domů</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:hunts_puzzlehunt_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; <a href="{% url 'admin:hunts_puzzlehunt_change' hunt.pk %}">{{ hunt.name }}</a>
+    &rsaquo; <a href="{% url 'admin:hunts_puzzlehunt_stats' hunt.pk %}">Statistiky</a>
+    &rsaquo; {{ puzzle.display_id }}
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    table.stats { width: 100%; border-collapse: collapse; }
+    table.stats th, table.stats td { padding: 6px 10px; border-bottom: 1px solid #eee; text-align: left; }
+    table.stats th { background: #f4f4f4; color: #000; }
+    table.stats td.num, table.stats th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: #888; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 0.8em; font-weight: 600; }
+    .pill.solved      { background: #e6f6ea; color: #2a8a3f; }
+    .pill.active      { background: #fff7e6; color: #cc8800; }
+    .pill.skipped     { background: #fdecea; color: #b00020; }
+    .pill.not_arrived { background: #f4f4f4; color: #888; }
+</style>
+
+<h1>{{ puzzle.display_id }} — {{ puzzle.name }}</h1>
+<p class="muted">
+    {{ hunt.name }} &middot;
+    Příchozí kód: <code>{{ puzzle.arrival_code }}</code> &middot;
+    Heslo: <code>{{ puzzle.password }}</code>
+</p>
+
+{% if team_rows %}
+    <table class="stats">
+        <thead>
+            <tr>
+                <th>Tým</th>
+                <th>Stav</th>
+                <th>Příchod</th>
+                <th>Vyřešeno</th>
+                <th class="num">Strávený čas</th>
+                <th class="num">Použité nápovědy</th>
+                <th class="num">Chybné odpovědi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in team_rows %}
+                <tr>
+                    <td>{{ row.team.name }}</td>
+                    <td><span class="pill {{ row.status }}">{% if row.status == "solved" %}vyřešeno{% elif row.status == "active" %}aktivní{% elif row.status == "skipped" %}přeskočeno{% else %}nedoraženo{% endif %}</span></td>
+                    <td>
+                        {% if row.arrived_at %}
+                            {{ row.arrived_at|date:"H:i" }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.solved_at %}
+                            {{ row.solved_at|date:"H:i" }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="num">
+                        {% if row.minutes_spent is not None %}
+                            {{ row.minutes_spent }} min
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="num">{{ row.hints_taken }}</td>
+                    <td class="num">{{ row.wrong_answers }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p class="muted">V této šifrovačce zatím nejsou žádné týmy.</p>
+{% endif %}
+
+<p style="margin-top: 1.5em;">
+    <a href="{% url 'admin:hunts_puzzlehunt_stats' hunt.pk %}">&larr; Zpět na statistiky šifrovačky</a>
+</p>
+{% endblock %}

@@ -165,7 +165,7 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
                 order = None
 
         base_points_raw = row.get("base_points", "")
-        base_points = 1
+        base_points = 10
         if base_points_raw:
             try:
                 base_points = int(base_points_raw)

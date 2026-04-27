@@ -1,7 +1,7 @@
 {% extends 'hunts/play_base.html' %}
 
 {% block content %}
-<h1>History</h1>
+<h1>Historie</h1>
 
 {% if history %}
     {% for entry in history %}
@@ -9,13 +9,13 @@
             <div>
                 <strong>{{ entry.attempt.puzzle.display_id }} — {{ entry.attempt.puzzle.name }}</strong>
                 <span style="margin-left: 0.5em; color: {% if entry.status == 'skipped' %}#cc8800{% else %}#2a8a3f{% endif %};">
-                    [{{ entry.status }}]
+                    [{% if entry.status == 'skipped' %}přeskočeno{% else %}vyřešeno{% endif %}]
                 </span>
             </div>
             <div class="stamp">
                 {{ entry.stamp|date:"Y-m-d H:i" }}
                 {% if entry.duration_minutes is not None %}
-                    · took {{ entry.duration_minutes }} min
+                    · trvalo {{ entry.duration_minutes }} min
                 {% endif %}
             </div>
             {% if entry.attempt.puzzle.solve_message %}
@@ -24,6 +24,6 @@
         </div>
     {% endfor %}
 {% else %}
-    <p class="empty">Nothing finished yet.</p>
+    <p class="empty">Zatím nic dokončeno.</p>
 {% endif %}
 {% endblock %}

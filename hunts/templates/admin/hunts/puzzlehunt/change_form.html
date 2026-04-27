@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+    {% if original %}
+        <li>
+            <a href="{% url 'admin:hunts_puzzlehunt_stats' original.pk %}">
+                Zobrazit statistiky
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'admin:hunts_puzzlehunt_leaderboard_csv' original.pk %}">
+                Stáhnout žebříček (CSV)
+            </a>
+        </li>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

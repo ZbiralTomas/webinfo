@@ -1,0 +1,231 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Domů</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:hunts_puzzlehunt_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; <a href="{% url 'admin:hunts_puzzlehunt_change' hunt.pk %}">{{ hunt.name }}</a>
+    &rsaquo; Statistiky
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .stats-section { margin-bottom: 2.5em; }
+    .stats-section h2 { margin-bottom: 0.6em; }
+    table.stats { width: 100%; border-collapse: collapse; }
+    table.stats th, table.stats td { padding: 6px 10px; border-bottom: 1px solid #eee; text-align: left; }
+    table.stats th { background: #f4f4f4; color: #000; }
+    table.stats td.num, table.stats th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: #888; }
+    .download-row { margin: 0.6em 0 1.2em; }
+
+    /* Matrix — self-contained styling so it stays readable in any admin theme. */
+    .matrix-wrap { overflow-x: auto; max-width: 100%; }
+    table.matrix { border-collapse: collapse; background: #fff; color: #111; }
+    table.matrix th, table.matrix td {
+        border: 1px solid #d0d0d0;
+        padding: 4px 8px;
+        font-size: 0.9em;
+        text-align: center;
+        white-space: nowrap;
+        background: #fff;
+        color: #111;
+    }
+    table.matrix th { color: #000; background: #f4f4f4; }
+    table.matrix th a, table.matrix th a:visited { color: #000; text-decoration: underline; }
+    table.matrix th.puzzle-group { font-weight: 700; }
+    table.matrix th.subhead { font-weight: 500; font-size: 0.8em; }
+    table.matrix td.team-name { text-align: left; font-weight: 600; }
+    table.matrix td.toa.solved      { background: #cdebd5; color: #1a5c2a; }
+    table.matrix td.toa.active      { background: #ffe9bf; color: #8a5a00; }
+    table.matrix td.toa.skipped     { background: #f8c8c2; color: #7a0014; }
+    table.matrix td.toa.not_arrived { background: #fafafa; color: #aaa; }
+    table.matrix td.tos, table.matrix td.hints { font-variant-numeric: tabular-nums; }
+
+    /* Sticky team column so labels stay visible when scrolling horizontally. */
+    table.matrix th.team-col, table.matrix td.team-name {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        box-shadow: 1px 0 0 #d0d0d0;
+    }
+    table.matrix th.team-col { z-index: 2; }
+</style>
+
+<h1>{{ hunt.name }} — statistiky</h1>
+<p class="muted">
+    Typ bodování: <strong>{{ hunt.get_scoring_type_display }}</strong>
+    &middot; {{ hunt.puzzles.count }} šifer &middot; {{ hunt.teams.count }} týmů
+</p>
+
+<div class="stats-section">
+    <h2>Statistiky pro jednotlivé šifry</h2>
+    {% if puzzle_rows %}
+        <table class="stats">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Šifra</th>
+                    <th class="num">Přišlo týmů</th>
+                    <th class="num">Vyřešeno</th>
+                    <th class="num">Přeskočeno</th>
+                    <th class="num">Prům. čas vyřešení</th>
+                    <th class="num">Použité nápovědy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in puzzle_rows %}
+                    <tr>
+                        <td class="num">{{ row.puzzle.order }}</td>
+                        <td>
+                            <a href="{% url 'admin:hunts_puzzlehunt_puzzle_drilldown' hunt.pk row.puzzle.pk %}">
+                                {{ row.puzzle.display_id }} — {{ row.puzzle.name }}
+                            </a>
+                        </td>
+                        <td class="num">{{ row.arrived }}</td>
+                        <td class="num">{{ row.solved }}</td>
+                        <td class="num">{{ row.skipped }}</td>
+                        <td class="num">
+                            {% if row.avg_solve_minutes is not None %}
+                                {{ row.avg_solve_minutes|floatformat:1 }} min
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="num">{{ row.hints_revealed }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="muted">Tato šifrovačka nemá žádné šifry.</p>
+    {% endif %}
+</div>
+
+<div class="stats-section">
+    <h2>Žebříček</h2>
+    <div class="download-row">
+        <a href="{% url 'admin:hunts_puzzlehunt_leaderboard_csv' hunt.pk %}" class="button">
+            Stáhnout CSV
+        </a>
+    </div>
+    {% if leaderboard_rows %}
+        <table class="stats">
+            <thead>
+                <tr>
+                    <th class="num">#</th>
+                    <th>Tým</th>
+                    {% if is_time_hunt %}
+                        <th class="num">Vyřešeno</th>
+                        <th class="num">Celkový čas</th>
+                        <th class="num">Uplynulo</th>
+                        <th class="num">Penalizace</th>
+                        <th class="num">Nápovědy</th>
+                        <th class="num">Přeskočeno</th>
+                    {% else %}
+                        <th class="num">Skóre</th>
+                        <th class="num">Vyřešeno</th>
+                        <th class="num">Přeskočeno</th>
+                        <th class="num">Nápovědy</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in leaderboard_rows %}
+                    <tr>
+                        <td class="num">{{ row.rank }}</td>
+                        <td>{{ row.team.name }}</td>
+                        {% if is_time_hunt %}
+                            <td class="num">{{ row.score.solved }}</td>
+                            <td class="num">{{ row.score.value }} min</td>
+                            <td class="num">{{ row.score.elapsed }} min</td>
+                            <td class="num">{{ row.score.penalty }} min</td>
+                            <td class="num">{{ row.hints_used }}</td>
+                            <td class="num">{{ row.score.skipped }}</td>
+                        {% else %}
+                            <td class="num">{{ row.score.value }}</td>
+                            <td class="num">{{ row.score.solved }}</td>
+                            <td class="num">{{ row.score.skipped }}</td>
+                            <td class="num">{{ row.hints_used }}</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="muted">V této šifrovačce zatím nejsou žádné týmy.</p>
+    {% endif %}
+</div>
+
+<div class="stats-section">
+    <h2>Matice postupu týmů</h2>
+    {% if matrix.rows and matrix.puzzles %}
+        <p class="muted">
+            Pro každou šifru: TOA = čas příchodu (barva buňky ukazuje stav —
+            <strong style="color:#1a5c2a;">vyřešeno</strong>,
+            <strong style="color:#8a5a00;">aktivní</strong>,
+            <strong style="color:#7a0014;">přeskočeno</strong>,
+            prázdné = nedoraženo). ToS = čas vyřešení. N = počet použitých nápověd.
+            Po najetí myší na buňku TOA se zobrazí celé časové údaje a strávený čas.
+        </p>
+        <div class="matrix-wrap">
+            <table class="matrix">
+                <thead>
+                    <tr>
+                        <th class="team-col" rowspan="2">Tým</th>
+                        {% for p in matrix.puzzles %}
+                            <th class="puzzle-group" colspan="3">
+                                <a href="{% url 'admin:hunts_puzzlehunt_puzzle_drilldown' hunt.pk p.pk %}">
+                                    {{ p.display_id }}
+                                </a>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for p in matrix.puzzles %}
+                            <th class="subhead">TOA</th>
+                            <th class="subhead">ToS</th>
+                            <th class="subhead">N</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team, cells in matrix.rows %}
+                        <tr>
+                            <td class="team-name">{{ team.name }}</td>
+                            {% for cell in cells %}
+                                <td class="toa {{ cell.status }}"
+                                    {% if cell.arrived_at %}title="Příchod {{ cell.arrived_at|date:"Y-m-d H:i" }}{% if cell.minutes_spent is not None %} · {{ cell.minutes_spent }} min stráveno{% endif %}"{% endif %}>
+                                    {% if cell.arrived_at %}
+                                        {{ cell.arrived_at|date:"H:i" }}
+                                    {% else %}
+                                        &nbsp;
+                                    {% endif %}
+                                </td>
+                                <td class="tos">
+                                    {% if cell.solved_at %}
+                                        {{ cell.solved_at|date:"H:i" }}
+                                    {% else %}
+                                        &nbsp;
+                                    {% endif %}
+                                </td>
+                                <td class="hints">
+                                    {% if cell.status != "not_arrived" %}
+                                        {{ cell.hints_taken }}
+                                    {% else %}
+                                        &nbsp;
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="muted">Pro zobrazení matice je potřeba alespoň jeden tým a jedna šifra.</p>
+    {% endif %}
+</div>
+{% endblock %}

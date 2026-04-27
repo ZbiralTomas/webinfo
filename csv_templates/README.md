@@ -17,7 +17,7 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 | `name`          | yes      |                                                                        |
 | `arrival_code`  | yes      | Unique within hunt.                                                    |
 | `password`      | yes      | Answer. Case-insensitive comparison at solve time.                     |
-| `base_points`   | no       | Points awarded when this puzzle is solved (points-based hunts only). Defaults to 1. |
+| `base_points`   | no       | Points awarded when this puzzle is solved (points-based hunts only). Defaults to 10. |
 | `prerequisites` | no       | Semicolon-separated display_ids, e.g. `P1;P2`.                         |
 | `solve_message` | no       | Free text shown after a correct solve. Quote if it contains commas.    |
 | `hint1_text`    | no       | Leave blank if no first hint.                                          |

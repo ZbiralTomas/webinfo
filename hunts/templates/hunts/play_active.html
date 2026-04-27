@@ -3,22 +3,22 @@
 {% block content %}
 {% if score.total > 0 and score.finished == score.total %}
 <div class="finish-banner">
-    <h2>Hunt complete!</h2>
-    <p>You finished {{ score.solved }} / {{ score.total }} with a final score of <strong>{{ score.value }}</strong> {{ score.unit }}.</p>
-    <p class="placeholder-note">[ Replace this banner with your celebration message in <code>hunts/templates/hunts/play_active.html</code>. ]</p>
+    <h2>Šifrovačka dokončena!</h2>
+    <p>Vyřešili jste {{ score.solved }} / {{ score.total }} s konečným výsledkem <strong>{{ score.value }}</strong> {{ score.unit }}.</p>
+    <p class="placeholder-note">[ Tento banner si uprav v <code>hunts/templates/hunts/play_active.html</code>. ]</p>
 </div>
 {% endif %}
 
-<h1>Active</h1>
+<h1>Aktivní</h1>
 
 <form method="post" action="{% url 'hunts:arrive' %}" style="margin-bottom: 2em;">
     {% csrf_token %}
     <div class="row" style="display: flex; gap: 0.5em;">
-        <input type="text" name="arrival_code" placeholder="Enter arrival code" autofocus>
-        <button type="submit">Arrive</button>
+        <input type="text" name="arrival_code" placeholder="Zadej příchozí kód" autofocus>
+        <button type="submit">Dorazit</button>
     </div>
     {% if max_active %}
-        <small style="color:#777;">{{ active_count }} / {{ max_active }} active puzzle slots used.</small>
+        <small style="color:#777;">{{ active_count }} / {{ max_active }} otevřených šifer.</small>
     {% endif %}
 </form>
 
@@ -26,17 +26,17 @@
     {% for r in rendered_attempts %}
         <div class="puzzle-card">
             <h2>{{ r.attempt.puzzle.display_id }} — {{ r.attempt.puzzle.name }}</h2>
-            <div class="meta">Active for {{ r.elapsed_minutes }} min</div>
+            <div class="meta">Otevřená {{ r.elapsed_minutes }} min</div>
 
             <form method="post" action="{% url 'hunts:answer' %}" style="margin-top: 0.75em;">
                 {% csrf_token %}
                 <input type="hidden" name="puzzle_id" value="{{ r.attempt.puzzle.id }}">
                 <div class="row">
-                    <input type="text" name="answer" placeholder="Your answer" {% if r.cooldown_seconds > 0 %}disabled{% endif %}>
-                    <button type="submit" {% if r.cooldown_seconds > 0 %}disabled{% endif %}>Submit answer</button>
+                    <input type="text" name="answer" placeholder="Tvoje odpověď" {% if r.cooldown_seconds > 0 %}disabled{% endif %}>
+                    <button type="submit" {% if r.cooldown_seconds > 0 %}disabled{% endif %}>Odeslat odpověď</button>
                 </div>
                 {% if r.cooldown_seconds > 0 %}
-                    <small style="color:#b00020;">Cooldown: wait {{ r.cooldown_seconds }} second{{ r.cooldown_seconds|pluralize }}.</small>
+                    <small style="color:#b00020;">Čekací doba: {{ r.cooldown_seconds }} s.</small>
                 {% endif %}
             </form>
 
@@ -47,7 +47,7 @@
                         {% if h.exists %}
                             {% if h.taken %}
                                 <div class="hint taken">
-                                    <strong>Hint {{ h.order }}</strong> ({{ h.cost }} {{ score.unit }}): {{ h.text }}
+                                    <strong>Nápověda {{ h.order }}</strong> ({{ h.cost }} {{ score.unit }}): {{ h.text }}
                                 </div>
                             {% elif h.available_in_seconds == 0 %}
                                 <div class="hint">
@@ -55,12 +55,12 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="puzzle_id" value="{{ r.attempt.puzzle.id }}">
                                         <input type="hidden" name="hint_order" value="{{ h.order }}">
-                                        <button type="submit" class="secondary">Reveal hint {{ h.order }} ({{ h.cost }} {{ score.unit }})</button>
+                                        <button type="submit" class="secondary">Zobrazit nápovědu {{ h.order }} ({{ h.cost }} {{ score.unit }})</button>
                                     </form>
                                 </div>
                             {% else %}
                                 <div class="hint locked">
-                                    Hint {{ h.order }} unlocks in ~{{ h.available_in_minutes }} min ({{ h.cost }} {{ score.unit }})
+                                    Nápověda {{ h.order }} se odemkne za ~{{ h.available_in_minutes }} min ({{ h.cost }} {{ score.unit }})
                                 </div>
                             {% endif %}
                         {% endif %}
@@ -71,16 +71,16 @@
 
             {% if hunt.allow_skip %}
                 <div class="actions">
-                    <form method="post" action="{% url 'hunts:skip' %}" onsubmit="return confirm('Skip this puzzle? You will get no points/credit for it.');">
+                    <form method="post" action="{% url 'hunts:skip' %}" onsubmit="return confirm('Opravdu přeskočit tuto šifru? Nedostanete za ni žádné body.');">
                         {% csrf_token %}
                         <input type="hidden" name="puzzle_id" value="{{ r.attempt.puzzle.id }}">
-                        <button type="submit" class="danger">Skip</button>
+                        <button type="submit" class="danger">Přeskočit</button>
                     </form>
                 </div>
             {% endif %}
         </div>
     {% endfor %}
 {% else %}
-    <p class="empty">No active puzzles. Find a puzzle in the real world and enter its arrival code above.</p>
+    <p class="empty">Žádné aktivní šifry. Najdi v terénu šifru a zadej její příchozí kód.</p>
 {% endif %}
 {% endblock %}

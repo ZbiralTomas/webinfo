@@ -25,12 +25,12 @@ class PuzzlehuntForm(forms.ModelForm):
         if h1 is not None and h2 is not None and h2 < h1:
             self.add_error(
                 "hint2_min_minutes",
-                "Must be at least as large as hint 1 threshold.",
+                "Musí být alespoň tak velké jako práh 1. nápovědy.",
             )
         if h2 is not None and h3 is not None and h3 < h2:
             self.add_error(
                 "hint3_min_minutes",
-                "Must be at least as large as hint 2 threshold.",
+                "Musí být alespoň tak velké jako práh 2. nápovědy.",
             )
         return cleaned
 
@@ -44,6 +44,7 @@ class ContactInline(admin.TabularInline):
 @admin.register(Puzzlehunt)
 class PuzzlehuntAdmin(admin.ModelAdmin):
     form = PuzzlehuntForm
+    change_form_template = "admin/hunts/puzzlehunt/change_form.html"
     list_display = (
         "name",
         "scoring_type",
@@ -56,25 +57,142 @@ class PuzzlehuntAdmin(admin.ModelAdmin):
     list_filter = ("scoring_type", "is_active")
     search_fields = ("name",)
     fieldsets = (
-        ("General", {"fields": ("name", "scoring_type", "is_active")}),
+        ("Obecné", {"fields": ("name", "scoring_type", "is_active")}),
         (
-            "Hint timing (minutes after arrival)",
+            "Časování nápověd (minuty od příchodu)",
             {"fields": ("hint1_min_minutes", "hint2_min_minutes", "hint3_min_minutes")},
         ),
         (
-            "Game rules",
+            "Pravidla hry",
             {"fields": ("allow_skip", "show_total_count", "max_active_puzzles")},
         ),
     )
     inlines = [ContactInline]
 
-    @admin.display(description="Puzzles")
+    @admin.display(description="Šifry")
     def puzzle_count(self, obj):
         return obj.puzzles.count()
 
-    @admin.display(description="Teams")
+    @admin.display(description="Týmy")
     def team_count(self, obj):
         return obj.teams.count()
+
+    def get_urls(self):
+        from django.urls import path
+
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<int:hunt_id>/stats/",
+                self.admin_site.admin_view(self.stats_view),
+                name="hunts_puzzlehunt_stats",
+            ),
+            path(
+                "<int:hunt_id>/puzzle/<int:puzzle_id>/",
+                self.admin_site.admin_view(self.puzzle_drilldown_view),
+                name="hunts_puzzlehunt_puzzle_drilldown",
+            ),
+            path(
+                "<int:hunt_id>/leaderboard.csv",
+                self.admin_site.admin_view(self.leaderboard_csv_view),
+                name="hunts_puzzlehunt_leaderboard_csv",
+            ),
+        ]
+        return custom + urls
+
+    def stats_view(self, request, hunt_id):
+        from django.http import Http404
+        from django.shortcuts import render
+
+        from . import stats
+
+        hunt = Puzzlehunt.objects.filter(pk=hunt_id).first()
+        if hunt is None:
+            raise Http404("Šifrovačka nenalezena")
+
+        return render(
+            request,
+            "admin/hunts/puzzlehunt/stats.html",
+            {
+                **self.admin_site.each_context(request),
+                "title": f"Statistiky — {hunt.name}",
+                "hunt": hunt,
+                "puzzle_rows": stats.puzzle_stats(hunt),
+                "leaderboard_rows": stats.leaderboard(hunt),
+                "matrix": stats.team_progress_matrix(hunt),
+                "is_time_hunt": hunt.scoring_type == Puzzlehunt.SCORING_TIME,
+                "opts": self.model._meta,
+            },
+        )
+
+    def puzzle_drilldown_view(self, request, hunt_id, puzzle_id):
+        from django.http import Http404
+        from django.shortcuts import render
+
+        from . import stats
+        from .models import Puzzle
+
+        hunt = Puzzlehunt.objects.filter(pk=hunt_id).first()
+        puzzle = (
+            Puzzle.objects.filter(pk=puzzle_id, puzzlehunt=hunt).first()
+            if hunt is not None else None
+        )
+        if puzzle is None:
+            raise Http404("Šifra v této šifrovačce nenalezena")
+
+        return render(
+            request,
+            "admin/hunts/puzzlehunt/puzzle_drilldown.html",
+            {
+                **self.admin_site.each_context(request),
+                "title": f"{puzzle} — statistiky týmů",
+                "hunt": hunt,
+                "puzzle": puzzle,
+                "team_rows": stats.puzzle_team_stats(puzzle),
+                "opts": self.model._meta,
+            },
+        )
+
+    def leaderboard_csv_view(self, request, hunt_id):
+        import csv
+
+        from django.http import Http404, HttpResponse
+        from django.utils.text import slugify
+
+        from . import stats
+
+        hunt = Puzzlehunt.objects.filter(pk=hunt_id).first()
+        if hunt is None:
+            raise Http404("Puzzlehunt not found")
+
+        rows = stats.leaderboard(hunt)
+        is_time = hunt.scoring_type == Puzzlehunt.SCORING_TIME
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="zebricek-{slugify(hunt.name) or "sifrovacka"}.csv"'
+        )
+        writer = csv.writer(response)
+        if is_time:
+            writer.writerow(
+                ["poradi", "tym", "vyreseno", "celkovy_cas_min",
+                 "uplynulo_min", "penalizace_min", "pouzite_napovedy", "preskoceno"]
+            )
+            for r in rows:
+                writer.writerow([
+                    r.rank, r.team.name, r.score.solved, r.score.value,
+                    r.score.elapsed, r.score.penalty, r.hints_used, r.score.skipped,
+                ])
+        else:
+            writer.writerow(
+                ["poradi", "tym", "skore", "vyreseno", "preskoceno", "pouzite_napovedy"]
+            )
+            for r in rows:
+                writer.writerow([
+                    r.rank, r.team.name, r.score.value,
+                    r.score.solved, r.score.skipped, r.hints_used,
+                ])
+        return response
 
 
 # ---------------------------------------------------------------------------
@@ -123,13 +241,13 @@ class PuzzleForm(forms.ModelForm):
             if offenders:
                 names = ", ".join(str(p) for p in offenders)
                 raise ValidationError(
-                    f"Prerequisites must come from the same puzzlehunt: {names}."
+                    f"Předpoklady musí být ze stejné šifrovačky: {names}."
                 )
 
         for p in prereqs:
             if _creates_cycle(self.instance, p):
                 raise ValidationError(
-                    f"Adding {p} as a prerequisite would create a cycle."
+                    f"Přidání {p} jako předpoklad by vytvořilo cyklus."
                 )
 
         return prereqs
@@ -151,8 +269,8 @@ class HintInlineFormSet(BaseInlineFormSet):
         expected = list(range(1, len(orders) + 1))
         if orders != expected:
             raise ValidationError(
-                "Hints must be numbered starting from 1 with no gaps "
-                "(allowed sets: {}, {1}, {1,2}, or {1,2,3})."
+                "Nápovědy musí být očíslované od 1 bez mezer "
+                "(povolené sady: {}, {1}, {1,2}, nebo {1,2,3})."
             )
 
 
@@ -171,7 +289,7 @@ class HintInline(admin.TabularInline):
                 if obj_id:
                     puzzle = Puzzle.objects.filter(pk=obj_id).first()
                     if puzzle is not None:
-                        formfield.label = f"Cost ({puzzle.puzzlehunt.hint_unit})"
+                        formfield.label = f"Cena ({puzzle.puzzlehunt.hint_unit})"
         return formfield
 
 
@@ -185,9 +303,9 @@ class PuzzleAdmin(admin.ModelAdmin):
     filter_horizontal = ("prerequisites",)
     inlines = [HintInline]
     fieldsets = (
-        ("Identification", {"fields": ("puzzlehunt", "display_id", "order", "name")}),
-        ("Solving", {"fields": ("arrival_code", "password", "base_points", "solve_message")}),
-        ("Prerequisites", {"fields": ("prerequisites",)}),
+        ("Identifikace", {"fields": ("puzzlehunt", "display_id", "order", "name")}),
+        ("Řešení", {"fields": ("arrival_code", "password", "base_points", "solve_message")}),
+        ("Předpoklady", {"fields": ("prerequisites",)}),
     )
 
     class Media:
@@ -261,9 +379,9 @@ class PuzzleAdmin(admin.ModelAdmin):
             uploaded = request.FILES.get("csv_file")
             hunt = Puzzlehunt.objects.filter(pk=hunt_id).first() if hunt_id else None
             if hunt is None:
-                errors.append("Pick a puzzlehunt to import into.")
+                errors.append("Vyber šifrovačku, do které se má importovat.")
             if uploaded is None:
-                errors.append("Attach a CSV file.")
+                errors.append("Přilož soubor CSV.")
             if not errors:
                 try:
                     result = import_puzzles(uploaded, puzzlehunt=hunt)
@@ -272,7 +390,7 @@ class PuzzleAdmin(admin.ModelAdmin):
                 else:
                     messages.success(
                         request,
-                        f"Imported {result.created} puzzle(s) into {hunt.name}.",
+                        f"Naimportováno {result.created} šifer do {hunt.name}.",
                     )
                     return redirect(reverse("admin:hunts_puzzle_changelist"))
 
@@ -281,7 +399,7 @@ class PuzzleAdmin(admin.ModelAdmin):
             "admin/hunts/puzzle/import_csv.html",
             {
                 **self.admin_site.each_context(request),
-                "title": "Import puzzles from CSV",
+                "title": "Import šifer ze souboru CSV",
                 "hunts": Puzzlehunt.objects.all().order_by("name"),
                 "errors": errors,
                 "opts": self.model._meta,
@@ -309,7 +427,7 @@ class PuzzleAttemptAdmin(admin.ModelAdmin):
         "answer_history",
     )
 
-    @admin.display(description="Answer attempts for this puzzle")
+    @admin.display(description="Pokusy o odpověď na tuto šifru")
     def answer_history(self, obj):
         if obj.pk is None:
             return "—"
@@ -317,14 +435,14 @@ class PuzzleAttemptAdmin(admin.ModelAdmin):
             team=obj.team, puzzle=obj.puzzle
         ).order_by("-submitted_at")
         if not attempts:
-            return "(no answers yet)"
+            return "(zatím žádné odpovědi)"
         return format_html_join(
             "",
             '<div>{} — <b>{}</b>: {}</div>',
             (
                 (
                     a.submitted_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "CORRECT" if a.correct else "wrong",
+                    "SPRÁVNĚ" if a.correct else "špatně",
                     a.submitted_answer,
                 )
                 for a in attempts

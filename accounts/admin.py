@@ -16,9 +16,10 @@ from .models import Team
 
 class TeamAdminForm(forms.ModelForm):
     new_password = forms.CharField(
+        label="Nové heslo",
         widget=forms.PasswordInput(render_value=False),
         required=False,
-        help_text="Leave blank to keep the current password.",
+        help_text="Pro zachování stávajícího hesla nech prázdné.",
     )
 
     class Meta:
@@ -29,7 +30,7 @@ class TeamAdminForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk is None:
             self.fields["new_password"].required = True
-            self.fields["new_password"].help_text = "Initial password for the team."
+            self.fields["new_password"].help_text = "Počáteční heslo týmu."
 
     def save(self, commit=True):
         team = super().save(commit=False)
@@ -48,7 +49,7 @@ class ActivePuzzleAttemptInline(admin.TabularInline):
     can_delete = False
     fields = ("puzzle", "arrived_at", "hints_taken")
     readonly_fields = fields
-    verbose_name_plural = "Active puzzles"
+    verbose_name_plural = "Aktivní šifry"
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -68,7 +69,7 @@ class FinishedPuzzleAttemptInline(admin.TabularInline):
     can_delete = False
     fields = ("puzzle", "arrived_at", "solved_at", "hints_taken", "skipped")
     readonly_fields = fields
-    verbose_name_plural = "Finished puzzles"
+    verbose_name_plural = "Dokončené šifry"
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -101,8 +102,8 @@ class TeamAdmin(admin.ModelAdmin):
     list_filter = ("puzzlehunt",)
     search_fields = ("name",)
     fieldsets = (
-        ("Identification", {"fields": ("puzzlehunt", "name")}),
-        ("Authentication", {"fields": ("new_password",)}),
+        ("Identifikace", {"fields": ("puzzlehunt", "name")}),
+        ("Přihlášení", {"fields": ("new_password",)}),
     )
     inlines = [
         ActivePuzzleAttemptInline,
@@ -110,7 +111,7 @@ class TeamAdmin(admin.ModelAdmin):
         AnswerAttemptInline,
     ]
 
-    @admin.display(description="Active puzzles")
+    @admin.display(description="Aktivní šifry")
     def active_puzzle_count(self, obj):
         count = obj.puzzle_attempts.filter(solved_at__isnull=True, skipped=False).count()
         url = (
@@ -153,9 +154,9 @@ class TeamAdmin(admin.ModelAdmin):
             uploaded = request.FILES.get("csv_file")
             hunt = Puzzlehunt.objects.filter(pk=hunt_id).first() if hunt_id else None
             if hunt is None:
-                errors.append("Pick a puzzlehunt to import into.")
+                errors.append("Vyber šifrovačku, do které se má importovat.")
             if uploaded is None:
-                errors.append("Attach a CSV file.")
+                errors.append("Přilož soubor CSV.")
             if not errors:
                 try:
                     result = import_teams(uploaded, puzzlehunt=hunt)
@@ -164,7 +165,7 @@ class TeamAdmin(admin.ModelAdmin):
                 else:
                     messages.success(
                         request,
-                        f"Imported {result.created} team(s) into {hunt.name}.",
+                        f"Naimportováno {result.created} týmů do {hunt.name}.",
                     )
                     return redirect(reverse("admin:accounts_team_changelist"))
 
@@ -173,7 +174,7 @@ class TeamAdmin(admin.ModelAdmin):
             "admin/accounts/team/import_csv.html",
             {
                 **self.admin_site.each_context(request),
-                "title": "Import teams from CSV",
+                "title": "Import týmů ze souboru CSV",
                 "hunts": Puzzlehunt.objects.all().order_by("name"),
                 "errors": errors,
                 "opts": self.model._meta,

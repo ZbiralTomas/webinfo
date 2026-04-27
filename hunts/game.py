@@ -74,7 +74,7 @@ def cooldown_remaining(team, puzzle) -> int:
 def enter_arrival_code(team, code: str) -> PuzzleAttempt:
     code_norm = _normalize(code)
     if not code_norm:
-        raise GameError("Enter an arrival code.")
+        raise GameError("Zadej příchozí kód.")
 
     # Find the puzzle in this hunt with a matching arrival_code (case-insensitive).
     puzzle = next(
@@ -82,15 +82,15 @@ def enter_arrival_code(team, code: str) -> PuzzleAttempt:
         None,
     )
     if puzzle is None:
-        raise GameError("That arrival code isn't recognized.")
+        raise GameError("Tento příchozí kód nebyl rozpoznán.")
 
     existing = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if existing is not None:
         if existing.solved_at is not None:
-            raise GameError(f"You've already solved “{puzzle.name}”.")
+            raise GameError(f"„{puzzle.name}“ jste již vyřešili.")
         if existing.skipped:
-            raise GameError(f"You've already skipped “{puzzle.name}”.")
-        raise GameError(f"You're already working on “{puzzle.name}”.")
+            raise GameError(f"„{puzzle.name}“ jste již přeskočili.")
+        raise GameError(f"Na „{puzzle.name}“ už pracujete.")
 
     # Prerequisite check: every prerequisite puzzle must be solved or skipped.
     prereq_ids = list(puzzle.prerequisites.values_list("pk", flat=True))
@@ -105,7 +105,7 @@ def enter_arrival_code(team, code: str) -> PuzzleAttempt:
         )
         if set(prereq_ids) - finished_prereq_ids:
             raise GameError(
-                "You haven't unlocked this puzzle yet — its prerequisites aren't all done."
+                "Tato šifra ještě není odemčena — některé předpoklady nejsou splněné."
             )
 
     # max_active_puzzles limit
@@ -114,8 +114,8 @@ def enter_arrival_code(team, code: str) -> PuzzleAttempt:
         active_count = get_active_attempts(team).count()
         if active_count >= max_active:
             raise GameError(
-                f"You can have at most {max_active} active puzzles at a time. "
-                "Solve or skip one before arriving at another."
+                f"Najednou můžete mít otevřeno nejvýše {max_active} šifer. "
+                "Před otevřením další jednu vyřeš nebo přeskoč."
             )
 
     return PuzzleAttempt.objects.create(team=team, puzzle=puzzle)
@@ -136,18 +136,18 @@ class AnswerResult:
 def submit_answer(team, puzzle_id: int, answer: str) -> AnswerResult:
     puzzle = team.puzzlehunt.puzzles.filter(pk=puzzle_id).first()
     if puzzle is None:
-        raise GameError("Pick a puzzle to answer.")
+        raise GameError("Vyber šifru, na kterou chceš odpovědět.")
     attempt = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if attempt is None or not attempt.is_active:
-        raise GameError(f"“{puzzle.name}” isn't currently active for your team.")
+        raise GameError(f"„{puzzle.name}“ není pro tvůj tým aktuálně aktivní.")
     if not (answer or "").strip():
-        raise GameError("Type an answer first.")
+        raise GameError("Nejprve napiš odpověď.")
 
     remaining = cooldown_remaining(team, puzzle)
     if remaining > 0:
         raise GameError(
-            f"Wait {remaining} more second{'s' if remaining != 1 else ''} "
-            f"before submitting another answer for “{puzzle.name}”."
+            f"Počkej ještě {remaining} s, "
+            f"než znovu odpovíš na „{puzzle.name}“."
         )
 
     correct = _normalize(answer) == _normalize(puzzle.password)
@@ -202,22 +202,22 @@ def hint_status_for(team, attempt) -> list[dict]:
 
 def reveal_hint(team, puzzle_id: int, hint_order: int) -> Hint:
     if hint_order not in (1, 2, 3):
-        raise GameError("Invalid hint number.")
+        raise GameError("Neplatné číslo nápovědy.")
     puzzle = team.puzzlehunt.puzzles.filter(pk=puzzle_id).first()
     if puzzle is None:
-        raise GameError("Unknown puzzle.")
+        raise GameError("Neznámá šifra.")
     attempt = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if attempt is None or not attempt.is_active:
-        raise GameError(f"“{puzzle.name}” isn't currently active.")
+        raise GameError(f"„{puzzle.name}“ není aktuálně aktivní.")
 
     hint = Hint.objects.filter(puzzle=puzzle, order=hint_order).first()
     if hint is None:
-        raise GameError(f"Hint {hint_order} doesn't exist for this puzzle.")
+        raise GameError(f"Nápověda {hint_order} pro tuto šifru neexistuje.")
 
     # Sequential: must take previous hints first
     if hint_order > attempt.hints_taken + 1:
         raise GameError(
-            f"Take hint {attempt.hints_taken + 1} first."
+            f"Nejprve si vezmi nápovědu {attempt.hints_taken + 1}."
         )
     if hint_order <= attempt.hints_taken:
         # Already revealed — just return it (idempotent).
@@ -229,7 +229,7 @@ def reveal_hint(team, puzzle_id: int, hint_order: int) -> Hint:
         secs = int((unlock_at - timezone.now()).total_seconds())
         mins = (secs + 59) // 60
         raise GameError(
-            f"Hint {hint_order} isn't available yet. Try again in ~{mins} min."
+            f"Nápověda {hint_order} ještě není dostupná. Zkus to za ~{mins} min."
         )
 
     with transaction.atomic():
@@ -245,13 +245,13 @@ def reveal_hint(team, puzzle_id: int, hint_order: int) -> Hint:
 
 def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
     if not team.puzzlehunt.allow_skip:
-        raise GameError("Skipping is disabled for this puzzlehunt.")
+        raise GameError("Přeskakování není v této šifrovačce povoleno.")
     puzzle = team.puzzlehunt.puzzles.filter(pk=puzzle_id).first()
     if puzzle is None:
-        raise GameError("Unknown puzzle.")
+        raise GameError("Neznámá šifra.")
     attempt = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if attempt is None or not attempt.is_active:
-        raise GameError(f"“{puzzle.name}” isn't currently active.")
+        raise GameError(f"„{puzzle.name}“ není aktuálně aktivní.")
     attempt.skipped = True
     attempt.save(update_fields=["skipped"])
     return attempt

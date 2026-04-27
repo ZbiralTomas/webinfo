@@ -4,13 +4,16 @@ from django.db import models
 
 class Team(models.Model):
     puzzlehunt = models.ForeignKey(
-        "hunts.Puzzlehunt", on_delete=models.CASCADE, related_name="teams"
+        "hunts.Puzzlehunt", on_delete=models.CASCADE, related_name="teams",
+        verbose_name="šifrovačka",
     )
-    name = models.CharField(max_length=100)
-    password = models.CharField(max_length=128)
-    created_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField("název týmu", max_length=100)
+    password = models.CharField("heslo", max_length=128)
+    created_at = models.DateTimeField("vytvořeno", auto_now_add=True)
 
     class Meta:
+        verbose_name = "tým"
+        verbose_name_plural = "týmy"
         constraints = [
             models.UniqueConstraint(
                 fields=["puzzlehunt", "name"],
