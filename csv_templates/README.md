@@ -15,8 +15,9 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 | `display_id`    | yes      | Unique within hunt. Free-form string.                                  |
 | `order`         | no       | Integer. Blank → auto-assigned to lowest unused.                       |
 | `name`          | yes      |                                                                        |
-| `arrival_code`  | yes      | Unique within hunt.                                                    |
-| `password`      | yes      | Answer. Case-insensitive comparison at solve time.                     |
+| `arrival_code`  | yes      | Unique within hunt. Comparison ignores case and diacritics at arrival. |
+| `arrival_message` | no     | Free text shown to the team as soon as they arrive at the puzzle (and later in the puzzle card / history). Quote if it contains commas. |
+| `password`      | yes      | Answer. Comparison ignores case and diacritics at solve time.          |
 | `base_points`   | no       | Points awarded when this puzzle is solved (points-based hunts only). Defaults to 10. |
 | `prerequisites` | no       | Semicolon-separated display_ids, e.g. `P1;P2`.                         |
 | `solve_message` | no       | Free text shown after a correct solve. Quote if it contains commas.    |

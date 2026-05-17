@@ -1,0 +1,16 @@
+display_id,order,name,arrival_code,arrival_message,password,base_points,prerequisites,solve_message,hint1_text,hint1_cost,hint2_text,hint2_cost,hint3_text,hint3_cost
+1, , 1, 1, , 1, 4, , "text", "text", 1, "text", 1, "text", 1
+2, , 2, 2, , 2, 4, , "text", "text", 1, "text", 1, "text", 1
+3, , 3, 3, , 3, 4, , "text", "text", 1, "text", 1, "text", 1
+4, , 4, 4, , 4, 6, , "text", "text", 1, "text", 1, "text", 1
+5, , 5, 5, , 5, 6, , "text", "text", 1, "text", 1, "text", 1
+6, , 6, 6, , 6, 6, , "text", "text", 1, "text", 1, "text", 1
+7, , 7, 7, , 7, 8, , "text", "text", 1, "text", 1, "text", 2
+8, , 8, 8, , 8, 8, , "text", "text", 1, "text", 1, "text", 2
+9, , 9, 9, , 9, 8, , "text", "text", 1, "text", 1, "text", 2
+10, , 10, 10, , 10, 10, , "text", "text", 1, "text", 2, "text", 2
+11, , 11, 11, , 11, 10 , , "text", "text", 1, "text", 2, "text", 2
+12, , 12, 12, , 12, 10, , "text", "text", 1, "text", 2, "text", 2
+13, , 13, 13, , 13, 12, , "text", "text", 2, "text", 2, "text", 2
+14, , 14, 14, , 14, 12, , "text", "text", 2, "text", 2, "text", 2
+15, , 15, 15, , 15, 12, , "text", "text", 2, "text", 2, "text", 2

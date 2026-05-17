@@ -8,6 +8,7 @@ that's safe to show the player.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -21,7 +22,10 @@ COOLDOWN_SECONDS = 60
 
 
 def _normalize(s: str) -> str:
-    return (s or "").strip().casefold()
+    s = (s or "").strip().casefold()
+    # NFD splits accented chars into base + combining marks; drop the marks so
+    # "Příklad" matches "priklad".
+    return "".join(c for c in unicodedata.normalize("NFD", s) if not unicodedata.combining(c))
 
 
 class GameError(Exception):

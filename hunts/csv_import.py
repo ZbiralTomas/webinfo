@@ -18,7 +18,7 @@ from accounts.models import Team
 from hunts.models import Hint, Puzzle
 
 
-PUZZLE_COLUMNS = {
+PUZZLE_REQUIRED_COLUMNS = {
     "display_id",
     "order",
     "name",
@@ -34,6 +34,8 @@ PUZZLE_COLUMNS = {
     "hint3_text",
     "hint3_cost",
 }
+PUZZLE_OPTIONAL_COLUMNS = {"arrival_message"}
+PUZZLE_COLUMNS = PUZZLE_REQUIRED_COLUMNS | PUZZLE_OPTIONAL_COLUMNS
 
 TEAM_COLUMNS = {"name", "password"}
 
@@ -83,10 +85,11 @@ def _read_rows(text: str):
     return reader.fieldnames or [], rows
 
 
-def _check_columns(fieldnames, required):
+def _check_columns(fieldnames, required, optional=frozenset()):
     headers = {(h or "").strip() for h in fieldnames}
+    known = required | optional
     missing = required - headers
-    extra = headers - required
+    extra = headers - known
     errors = []
     if missing:
         errors.append(f"Missing required columns: {sorted(missing)}")
@@ -105,7 +108,7 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
     fieldnames, rows = _read_rows(text)
 
     errors = []
-    for e in _check_columns(fieldnames, PUZZLE_COLUMNS):
+    for e in _check_columns(fieldnames, PUZZLE_REQUIRED_COLUMNS, PUZZLE_OPTIONAL_COLUMNS):
         if e.startswith("Missing"):
             errors.append(e)
     if errors:
@@ -228,6 +231,7 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
                 "order": order,
                 "name": name,
                 "arrival_code": arrival_code,
+                "arrival_message": row.get("arrival_message", ""),
                 "password": password,
                 "base_points": base_points,
                 "solve_message": row.get("solve_message", ""),
@@ -264,6 +268,7 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
                 order=p["order"],
                 name=p["name"],
                 arrival_code=p["arrival_code"],
+                arrival_message=p["arrival_message"],
                 password=p["password"],
                 base_points=p["base_points"],
                 solve_message=p["solve_message"],

@@ -1,11 +1,12 @@
 {% extends 'hunts/play_base.html' %}
+{% load static %}
 
 {% block content %}
 {% if score.total > 0 and score.finished == score.total %}
 <div class="finish-banner">
+    <img src="{% static 'webinfo/lopata.gif' %}" alt="" class="finish-banner-gif">
     <h2>Šifrovačka dokončena!</h2>
     <p>Vyřešili jste {{ score.solved }} / {{ score.total }} s konečným výsledkem <strong>{{ score.value }}</strong> {{ score.unit }}.</p>
-    <p class="placeholder-note">[ Tento banner si uprav v <code>hunts/templates/hunts/play_active.html</code>. ]</p>
 </div>
 {% endif %}
 
@@ -27,6 +28,10 @@
         <div class="puzzle-card">
             <h2>{{ r.attempt.puzzle.display_id }} — {{ r.attempt.puzzle.name }}</h2>
             <div class="meta">Otevřená {{ r.elapsed_minutes }} min</div>
+
+            {% if r.attempt.puzzle.arrival_message %}
+                <div class="arrival-message">{{ r.attempt.puzzle.arrival_message }}</div>
+            {% endif %}
 
             <form method="post" action="{% url 'hunts:answer' %}" style="margin-top: 0.75em;">
                 {% csrf_token %}

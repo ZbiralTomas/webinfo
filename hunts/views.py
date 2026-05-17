@@ -101,7 +101,11 @@ def arrive_view(request):
     except game.GameError as e:
         messages.error(request, str(e))
     else:
-        messages.success(request, f"Dorazili jste k „{attempt.puzzle.name}“.")
+        if attempt.puzzle.arrival_message:
+            msg = attempt.puzzle.arrival_message
+        else:
+            msg = f"Dorazili jste k „{attempt.puzzle.name}“."
+        messages.success(request, msg)
     return redirect("hunts:active")
 
 
@@ -118,10 +122,11 @@ def answer_view(request):
         messages.error(request, str(e))
     else:
         if result.correct:
-            messages.success(
-                request,
-                f"Správně u „{result.puzzle.name}“! {result.solve_message}".strip(),
-            )
+            if result.solve_message:
+                msg = result.solve_message
+            else:
+                msg = f"Správně u „{result.puzzle.name}“!"
+            messages.success(request, msg)
         else:
             messages.warning(
                 request,

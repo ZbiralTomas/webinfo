@@ -32,3 +32,9 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Hunt-specific CSVs (plaintext team passwords / real puzzle content)
+csv_templates/*_tymy.csv
+csv_templates/*_sifry.csv
+csv_templates/*.numbers
+csv_templates/results_*.csv

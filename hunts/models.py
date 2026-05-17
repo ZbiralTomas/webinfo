@@ -58,6 +58,7 @@ class Puzzle(models.Model):
     )
     name = models.CharField("název", max_length=200)
     arrival_code = models.CharField("příchozí kód", max_length=100)
+    arrival_message = models.TextField("zpráva po doražení", blank=True)
     password = models.CharField("heslo", max_length=100)
     base_points = models.PositiveIntegerField(
         "základní body",

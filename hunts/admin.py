@@ -304,7 +304,7 @@ class PuzzleAdmin(admin.ModelAdmin):
     inlines = [HintInline]
     fieldsets = (
         ("Identifikace", {"fields": ("puzzlehunt", "display_id", "order", "name")}),
-        ("Řešení", {"fields": ("arrival_code", "password", "base_points", "solve_message")}),
+        ("Řešení", {"fields": ("arrival_code", "arrival_message", "password", "base_points", "solve_message")}),
         ("Předpoklady", {"fields": ("prerequisites",)}),
     )
 

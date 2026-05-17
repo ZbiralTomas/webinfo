@@ -18,6 +18,9 @@
                     · trvalo {{ entry.duration_minutes }} min
                 {% endif %}
             </div>
+            {% if entry.attempt.puzzle.arrival_message %}
+                <div class="arrival-message">{{ entry.attempt.puzzle.arrival_message }}</div>
+            {% endif %}
             {% if entry.attempt.puzzle.solve_message %}
                 <div style="margin-top: 0.5em;">{{ entry.attempt.puzzle.solve_message }}</div>
             {% endif %}

@@ -1,0 +1,9 @@
+display_id,order,name,arrival_code,arrival_message,password,base_points,prerequisites,solve_message,hint1_text,hint1_cost,hint2_text,hint2_cost,hint3_text,hint3_cost
+A1, , A1, A1, , A1, 10, , "Res A2", "text", 20, "text", 20, "text", 20
+A2, , A2, A2, , A2, 10, A1, "Res A3", "text", 20, "text", 20, "text", 20
+A3, , A3, A3, , A3, 10, A2, "Res A4", "text", 20, "text", 20, "text", 20
+A4, , A4, A4, , A4, 10, A3, "cil A", "text", 20, "text", 20, "text", 20
+B1, , B1, B1, , B1, 10, , "Res B2", "text", 20, "text", 20, "text", 20
+B2, , B2, B2, , B2, 10, B1, "Res B3", "text", 20, "text", 20, "text", 20
+B3, , B3, B3, , B3, 10, B2, "Res B4", "text", 20, "text", 20, "text", 20
+B4, , B4, B4, , B4, 10, B3, "cil B", "text", 20, "text", 20, "text", 20
