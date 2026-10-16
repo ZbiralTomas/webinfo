@@ -296,12 +296,63 @@ def reveal_hint(team, puzzle_id: int, hint_order: int) -> Hint:
 # ---------------------------------------------------------------------------
 
 
+@dataclass
+class IntroSkipStatus:
+    available: int          # skips the team can use right now
+    next_in_seconds: int    # until the next skip is earned
+
+    @property
+    def next_in_minutes(self) -> int:
+        return (self.next_in_seconds + 59) // 60
+
+
+def uses_intro_skip_timer(hunt, puzzle) -> bool:
+    return puzzle.opens_at_start and hunt.intro_skip_interval_minutes is not None
+
+
+def intro_skip_status(team) -> IntroSkipStatus | None:
+    """Skip credit for the intro puzzles, or None if the timer is off or the
+    team hasn't started yet. One skip is earned per full interval since the
+    start; unused ones accumulate."""
+    interval = team.puzzlehunt.intro_skip_interval_minutes
+    if interval is None:
+        return None
+    intro_attempts = team.puzzle_attempts.filter(puzzle__opens_at_start=True)
+    start = intro_attempts.order_by("arrived_at").values_list("arrived_at", flat=True).first()
+    if start is None:
+        return None
+    interval_s = interval * 60
+    elapsed = max(0, int((timezone.now() - start).total_seconds()))
+    used = intro_attempts.filter(skipped=True).count()
+    return IntroSkipStatus(
+        available=max(0, elapsed // interval_s - used),
+        next_in_seconds=interval_s - elapsed % interval_s,
+    )
+
+
+def can_skip(team, puzzle) -> bool:
+    """Whether the Skip button should be offered for this puzzle."""
+    hunt = team.puzzlehunt
+    if uses_intro_skip_timer(hunt, puzzle):
+        status = intro_skip_status(team)
+        return status is not None and status.available > 0
+    return hunt.allow_skip
+
+
 def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
-    if not team.puzzlehunt.allow_skip:
-        raise GameError("Přeskakování není v této šifrovačce povoleno.")
-    puzzle = team.puzzlehunt.puzzles.filter(pk=puzzle_id).first()
+    hunt = team.puzzlehunt
+    puzzle = hunt.puzzles.filter(pk=puzzle_id).first()
     if puzzle is None:
         raise GameError("Neznámá šifra.")
+    if uses_intro_skip_timer(hunt, puzzle):
+        status = intro_skip_status(team)
+        if status is None or status.available < 1:
+            mins = ((status.next_in_seconds if status else 0) + 59) // 60
+            raise GameError(
+                f"Přeskočení úvodní šifry zatím není dostupné. Další bude za ~{mins} min."
+            )
+    elif not hunt.allow_skip:
+        raise GameError("Přeskakování není v této šifrovačce povoleno.")
     attempt = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if attempt is None or not attempt.is_active:
         raise GameError(f"„{puzzle.name}“ není aktuálně aktivní.")

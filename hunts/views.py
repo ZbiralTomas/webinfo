@@ -35,7 +35,10 @@ def active_view(request):
             "elapsed_minutes": int((timezone.now() - a.arrived_at).total_seconds() // 60),
             "cooldown_seconds": game.cooldown_remaining(team, a.puzzle),
             "hints": game.hint_status_for(team, a),
+            "can_skip": game.can_skip(team, a.puzzle),
         })
+    has_active_intro = any(a.puzzle.opens_at_start for a in active_attempts)
+    intro_skip = game.intro_skip_status(team) if has_active_intro else None
     return render(
         request,
         "hunts/play_active.html",
@@ -46,6 +49,7 @@ def active_view(request):
             "max_active": team.puzzlehunt.max_active_puzzles,
             "active_count": len(active_attempts),
             "unlock_notices": game.get_unlock_notices(team),
+            "intro_skip": intro_skip,
             "has_started": team.puzzle_attempts.exists(),
         },
     )

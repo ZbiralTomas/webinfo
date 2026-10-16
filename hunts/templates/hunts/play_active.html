@@ -23,6 +23,14 @@
     {% endif %}
 </form>
 
+{% if intro_skip %}
+    <div class="arrival-message" style="margin-bottom: 1.5em;">
+        Dostupná přeskočení úvodních šifer: <strong>{{ intro_skip.available }}</strong>.
+        {% if intro_skip.available %}Tlačítko „Přeskočit“ je na kartě šifry, kterou si vyberete.{% endif %}
+        Další přeskočení za ~{{ intro_skip.next_in_minutes }} min.
+    </div>
+{% endif %}
+
 {% for puzzle in unlock_notices %}
     <div class="puzzle-card">
         <h2>Odemčeno: {{ puzzle.display_id }} — {{ puzzle.name }}</h2>
@@ -81,7 +89,7 @@
             {% endif %}
             {% endwith %}
 
-            {% if hunt.allow_skip %}
+            {% if r.can_skip %}
                 <div class="actions">
                     <form method="post" action="{% url 'hunts:skip' %}" onsubmit="return confirm('Opravdu přeskočit tuto šifru? Nedostanete za ni žádné body.');">
                         {% csrf_token %}

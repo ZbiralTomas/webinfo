@@ -124,6 +124,14 @@ A *Puzzlehunt* is the container for one event. Fields:
 - **Startovní heslo** (`start_code`) — optional. When a team enters it
   on the Active tab, every puzzle flagged *Otevře se se startem* opens at
   once and the team's clock starts. See *Hunt with a common start* below.
+- **Interval přeskočení úvodních šifer** (`intro_skip_interval_minutes`)
+  — optional, in minutes. From the moment a team enters the start code,
+  it earns one skip every N minutes (unused skips accumulate) and can
+  spend each on any *Otevře se se startem* puzzle it chooses, via the
+  "Přeskočit" button on that puzzle's card. The Active tab shows how many
+  skips are available and when the next one arrives. For intro puzzles
+  this timer replaces *Povolit přeskočení*; other puzzles still follow
+  *Povolit přeskočení*. Blank = timer off.
 - **Povolit přeskočení** — when on, teams see a "Přeskočit" button on
   active puzzles. Skipped puzzles count as finished but contribute no
   points. When off, the button is hidden everywhere.
@@ -203,6 +211,8 @@ Play: a team enters the start code, all intro puzzles open together and
 the clock starts. Once every intro password is entered, the unlock
 message of the first linear puzzle appears; the team goes there and
 enters its arrival code, and so on. The start code works once per team.
+Optionally set **Interval přeskočení úvodních šifer** (e.g. 30) so teams
+stuck on an intro puzzle can skip one of their choice every 30 minutes.
 `max_active_puzzles` does not apply to the intro puzzles.
 
 ### Teams

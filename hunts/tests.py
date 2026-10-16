@@ -108,7 +108,92 @@ class StartCodeFlowTests(TestCase):
         self.assertEqual([a.puzzle for a in game.enter_arrival_code(team, "ac")], [p])
 
 
-class PlayerViewTests(TestCase):
+class IntroSkipTimerTests(TestCase):
+    def _age_start(self, team, minutes):
+        """Pretend the team started `minutes` ago."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=minutes))
+
+    def _started(self, interval=30, **kw):
+        hunt, intro, l1, l2, team = make_opening_hunt(**kw)
+        hunt.intro_skip_interval_minutes = interval
+        hunt.save()
+        team.refresh_from_db()
+        game.enter_arrival_code(team, "START")
+        return hunt, intro, l1, l2, team
+
+    def test_no_skip_before_first_interval(self):
+        hunt, intro, l1, l2, team = self._started()
+        self._age_start(team, 29)
+        self.assertEqual(game.intro_skip_status(team).available, 0)
+        self.assertFalse(game.can_skip(team, intro[0]))
+        with self.assertRaises(game.GameError):
+            game.skip_puzzle(team, intro[0].pk)
+
+    def test_one_skip_per_interval_chosen_by_team(self):
+        hunt, intro, l1, l2, team = self._started()
+        self._age_start(team, 31)
+        status = game.intro_skip_status(team)
+        self.assertEqual(status.available, 1)
+        self.assertTrue(game.can_skip(team, intro[1]))
+        game.skip_puzzle(team, intro[1].pk)  # team picks the second one
+        self.assertTrue(team.puzzle_attempts.get(puzzle=intro[1]).skipped)
+        self.assertFalse(team.puzzle_attempts.get(puzzle=intro[0]).skipped)
+        self.assertEqual(game.intro_skip_status(team).available, 0)
+        with self.assertRaises(game.GameError):
+            game.skip_puzzle(team, intro[0].pk)
+
+    def test_unused_skips_accumulate(self):
+        hunt, intro, l1, l2, team = self._started()
+        self._age_start(team, 65)
+        self.assertEqual(game.intro_skip_status(team).available, 2)
+        game.skip_puzzle(team, intro[0].pk)
+        game.skip_puzzle(team, intro[1].pk)
+        with self.assertRaises(game.GameError):
+            game.skip_puzzle(team, intro[2].pk)
+
+    def test_next_in_countdown(self):
+        hunt, intro, l1, l2, team = self._started()
+        self._age_start(team, 10)
+        self.assertEqual(game.intro_skip_status(team).next_in_minutes, 20)
+
+    def test_skipped_intro_counts_toward_unlocking_next_puzzle(self):
+        hunt, intro, l1, l2, team = self._started()
+        self._age_start(team, 31)
+        game.skip_puzzle(team, intro[0].pk)
+        for p in intro[1:]:
+            game.submit_answer(team, p.pk, p.password)
+        self.assertEqual(game.get_unlock_notices(team), [l1])
+
+    def test_timer_overrides_allow_skip_for_intro_only(self):
+        hunt, intro, l1, l2, team = self._started(allow_skip=True)
+        # Intro puzzle: timer decides even though allow_skip is on.
+        self.assertFalse(game.can_skip(team, intro[0]))
+        # Other puzzles: allow_skip still applies.
+        self.assertTrue(game.can_skip(team, l1))
+
+    def test_timer_off_falls_back_to_allow_skip(self):
+        hunt, intro, l1, l2, team = make_opening_hunt(allow_skip=True)
+        game.enter_arrival_code(team, "START")
+        self.assertIsNone(game.intro_skip_status(team))
+        self.assertTrue(game.can_skip(team, intro[0]))
+        hunt.allow_skip = False
+        hunt.save()
+        team.refresh_from_db()
+        self.assertFalse(game.can_skip(team, intro[0]))
+
+    def test_no_status_before_start(self):
+        hunt, intro, l1, l2, team = make_opening_hunt()
+        hunt.intro_skip_interval_minutes = 30
+        hunt.save()
+        team.refresh_from_db()
+        self.assertIsNone(game.intro_skip_status(team))
+
+
+class LoginMixin:
     def _login(self, team):
         from django.core.signing import get_cookie_signer
 
@@ -117,6 +202,8 @@ class PlayerViewTests(TestCase):
         signer = get_cookie_signer(salt=TEAM_COOKIE_NAME + TEAM_COOKIE_SALT)
         self.client.cookies[TEAM_COOKIE_NAME] = signer.sign(str(team.pk))
 
+
+class PlayerViewTests(LoginMixin, TestCase):
     def test_full_flow_through_views(self):
         hunt, intro, l1, l2, team = make_opening_hunt()
         self._login(team)
@@ -234,3 +321,29 @@ class CsvImportTests(TestCase):
         self.assertEqual(result.created, 6)
         self.assertEqual(hunt.puzzles.filter(opens_at_start=True).count(), 4)
         self.assertEqual(hunt.puzzles.get(display_id="L1").prerequisites.count(), 4)
+
+
+class IntroSkipViewTests(LoginMixin, TestCase):
+    def test_skip_button_appears_after_interval_and_works(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        hunt, intro, l1, l2, team = make_opening_hunt()
+        hunt.intro_skip_interval_minutes = 30
+        hunt.save()
+        self._login(team)
+        self.client.post("/play/arrive/", {"arrival_code": "start"})
+
+        resp = self.client.get("/play/active/")
+        self.assertContains(resp, "Dostupná přeskočení úvodních šifer: <strong>0</strong>")
+        self.assertNotContains(resp, "Přeskočit</button>")
+
+        team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=31))
+        resp = self.client.get("/play/active/")
+        self.assertContains(resp, "<strong>1</strong>")
+        self.assertContains(resp, "Přeskočit</button>", count=3)  # one per intro card
+
+        resp = self.client.post("/play/skip/", {"puzzle_id": intro[0].pk}, follow=True)
+        self.assertContains(resp, "přeskočena")
+        self.assertNotContains(resp, "Přeskočit</button>")

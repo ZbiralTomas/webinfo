@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -28,6 +29,13 @@ class Puzzlehunt(models.Model):
         max_length=100,
         blank=True,
         help_text="Volitelné. Po zadání tohoto hesla se týmu najednou otevřou všechny šifry označené jako „otevře se se startem“. Prázdné = hra nemá společný start.",
+    )
+    intro_skip_interval_minutes = models.PositiveIntegerField(
+        "interval přeskočení úvodních šifer (min)",
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Volitelné. Od startu se týmu každých N minut připíše jedno přeskočení, které může využít na libovolnou úvodní šifru (otevřenou se startem). Nevyužitá přeskočení se hromadí. U úvodních šifer pak rozhoduje jen tento časovač, ne volba „povolit přeskočení“. Prázdné = vypnuto.",
     )
     is_active = models.BooleanField("aktivní", default=True)
     created_at = models.DateTimeField("vytvořeno", auto_now_add=True)
