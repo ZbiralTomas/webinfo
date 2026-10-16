@@ -1,10 +1,11 @@
 # CSV templates
 
-Two templates for bulk-importing into a puzzlehunt. The admin upload form
+Templates for bulk-importing into a puzzlehunt. The admin upload form
 asks you to pick a target hunt, then accepts the CSV.
 
 - `puzzles_template.csv` — puzzle rows. See column reference below.
 - `teams_template.csv` — team rows.
+- `uvod_a_linearni_template.csv` — puzzles for a hunt with a common start (intro puzzles opened by the start code, then a linear chain). Set the hunt's start code before importing.
 
 Both files are UTF-8, comma-delimited, standard CSV quoting.
 
@@ -15,7 +16,9 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 | `display_id`    | yes      | Unique within hunt. Free-form string.                                  |
 | `order`         | no       | Integer. Blank → auto-assigned to lowest unused.                       |
 | `name`          | yes      |                                                                        |
-| `arrival_code`  | yes      | Unique within hunt. Comparison ignores case and diacritics at arrival. |
+| `arrival_code`  | yes*     | Unique within hunt. Comparison ignores case and diacritics at arrival. *May be blank only when `opens_at_start` is yes. |
+| `opens_at_start` | no      | `yes`/`ano`/`1` → the puzzle is opened by the hunt's start code (set it on the hunt first). Must have no `prerequisites`. Blank = no. |
+| `unlock_message` | no      | Free text shown to the team once all `prerequisites` are finished, until they arrive at the puzzle (e.g. where to find it and its arrival code). Quote if it contains commas. |
 | `arrival_message` | no     | Free text shown to the team as soon as they arrive at the puzzle (and later in the puzzle card / history). Quote if it contains commas. |
 | `password`      | yes      | Answer. Comparison ignores case and diacritics at solve time.          |
 | `base_points`   | no       | Points awarded when this puzzle is solved (points-based hunts only). Defaults to 10. |
@@ -32,6 +35,8 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 - Hints must be sequential (no hint 2 without hint 1).
 - Prerequisites must reference other puzzles in the same hunt.
 - No prerequisite cycles.
+- `opens_at_start` puzzles need a start code on the hunt and no prerequisites.
+- `arrival_code` must not equal the hunt's start code.
 - `display_id` and `arrival_code` must each be unique within the hunt.
 - `hintN_cost` is required when `hintN_text` is non-empty.
 

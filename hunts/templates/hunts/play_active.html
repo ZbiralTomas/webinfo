@@ -15,13 +15,20 @@
 <form method="post" action="{% url 'hunts:arrive' %}" style="margin-bottom: 2em;">
     {% csrf_token %}
     <div class="row" style="display: flex; gap: 0.5em;">
-        <input type="text" name="arrival_code" placeholder="Zadej příchozí kód" autofocus>
+        <input type="text" name="arrival_code" placeholder="{% if hunt.start_code and not has_started %}Zadej startovní heslo nebo příchozí kód{% else %}Zadej příchozí kód{% endif %}" autofocus>
         <button type="submit">Dorazit</button>
     </div>
     {% if max_active %}
         <small style="color:#777;">{{ active_count }} / {{ max_active }} otevřených šifer.</small>
     {% endif %}
 </form>
+
+{% for puzzle in unlock_notices %}
+    <div class="puzzle-card">
+        <h2>Odemčeno: {{ puzzle.display_id }} — {{ puzzle.name }}</h2>
+        <div class="arrival-message">{{ puzzle.unlock_message|linebreaksbr }}</div>
+    </div>
+{% endfor %}
 
 {% if rendered_attempts %}
     {% for r in rendered_attempts %}
@@ -86,6 +93,12 @@
         </div>
     {% endfor %}
 {% else %}
-    <p class="empty">Žádné aktivní šifry. Najdi v terénu šifru a zadej její příchozí kód.</p>
+    <p class="empty">
+        {% if hunt.start_code and not has_started %}
+            Žádné aktivní šifry. Zadej startovní heslo.
+        {% elif not unlock_notices %}
+            Žádné aktivní šifry. Najdi v terénu šifru a zadej její příchozí kód.
+        {% endif %}
+    </p>
 {% endif %}
 {% endblock %}

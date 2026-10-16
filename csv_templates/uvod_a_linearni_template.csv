@@ -1,0 +1,7 @@
+display_id,order,name,arrival_code,arrival_message,opens_at_start,password,base_points,prerequisites,solve_message,unlock_message,hint1_text,hint1_cost,hint2_text,hint2_cost,hint3_text,hint3_cost
+U1,1,Úvodní šifra 1,,,ano,heslo1,,,,,,,,,,
+U2,2,Úvodní šifra 2,,,ano,heslo2,,,,,,,,,,
+U3,3,Úvodní šifra 3,,,ano,heslo3,,,,,,,,,,
+U4,4,Úvodní šifra 4,,,ano,heslo4,,,,,,,,,,
+L1,5,První šifra,KOD-L1,,,odpoved5,,U1;U2;U3;U4,,"Zvládli jste úvod! Běžte k fontáně a zadejte kód KOD-L1.",,,,,,
+L2,6,Druhá šifra,KOD-L2,,,odpoved6,,L1,,"Další šifra je u lavičky, kód KOD-L2.",,,,,,

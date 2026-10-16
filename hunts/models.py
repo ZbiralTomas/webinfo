@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -21,6 +22,12 @@ class Puzzlehunt(models.Model):
         null=True,
         blank=True,
         help_text="Nejvyšší počet šifer, které může mít tým otevřené (doražených, ale nevyřešených/nepřeskočených) zároveň. Prázdné = bez omezení.",
+    )
+    start_code = models.CharField(
+        "startovní heslo",
+        max_length=100,
+        blank=True,
+        help_text="Volitelné. Po zadání tohoto hesla se týmu najednou otevřou všechny šifry označené jako „otevře se se startem“. Prázdné = hra nemá společný start.",
     )
     is_active = models.BooleanField("aktivní", default=True)
     created_at = models.DateTimeField("vytvořeno", auto_now_add=True)
@@ -57,8 +64,23 @@ class Puzzle(models.Model):
         help_text="Číselné pořadí v rámci šifrovačky. Prázdné = automaticky doplnit nejnižší volné číslo.",
     )
     name = models.CharField("název", max_length=200)
-    arrival_code = models.CharField("příchozí kód", max_length=100)
+    arrival_code = models.CharField(
+        "příchozí kód",
+        max_length=100,
+        blank=True,
+        help_text="Povinný, pokud se šifra neotevírá startovním heslem.",
+    )
     arrival_message = models.TextField("zpráva po doražení", blank=True)
+    opens_at_start = models.BooleanField(
+        "otevře se se startem",
+        default=False,
+        help_text="Šifra se týmu otevře hned po zadání startovního hesla šifrovačky (bez příchozího kódu). Taková šifra nesmí mít předpoklady.",
+    )
+    unlock_message = models.TextField(
+        "zpráva po odemčení",
+        blank=True,
+        help_text="Zobrazí se týmu na záložce Aktivní, jakmile splní všechny předpoklady této šifry (typicky kde šifru najít a její příchozí kód).",
+    )
     password = models.CharField("heslo", max_length=100)
     base_points = models.PositiveIntegerField(
         "základní body",
@@ -84,6 +106,7 @@ class Puzzle(models.Model):
             ),
             models.UniqueConstraint(
                 fields=["puzzlehunt", "arrival_code"],
+                condition=~models.Q(arrival_code=""),
                 name="unique_arrival_code_per_hunt",
             ),
             models.UniqueConstraint(
@@ -92,6 +115,23 @@ class Puzzle(models.Model):
             ),
         ]
         ordering = ["puzzlehunt", "order", "display_id"]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if not self.opens_at_start and not self.arrival_code:
+            errors["arrival_code"] = "Příchozí kód je povinný, pokud se šifra neotevírá startovním heslem."
+        if self.opens_at_start and self.puzzlehunt_id and not self.puzzlehunt.start_code:
+            errors["opens_at_start"] = "Nejprve nastav šifrovačce startovní heslo."
+        if (
+            self.arrival_code
+            and self.puzzlehunt_id
+            and self.puzzlehunt.start_code
+            and self.arrival_code.strip().casefold() == self.puzzlehunt.start_code.strip().casefold()
+        ):
+            errors["arrival_code"] = "Příchozí kód se nesmí shodovat se startovním heslem šifrovačky."
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if self.order is None and self.puzzlehunt_id:

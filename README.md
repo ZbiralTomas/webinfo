@@ -121,6 +121,9 @@ A *Puzzlehunt* is the container for one event. Fields:
   team must wait after arriving at a puzzle before each hint can be
   revealed. There are at most 3 hints per puzzle and the form
   validates `hint1 ≤ hint2 ≤ hint3`.
+- **Startovní heslo** (`start_code`) — optional. When a team enters it
+  on the Active tab, every puzzle flagged *Otevře se se startem* opens at
+  once and the team's clock starts. See *Hunt with a common start* below.
 - **Povolit přeskočení** — when on, teams see a "Přeskočit" button on
   active puzzles. Skipped puzzles count as finished but contribute no
   points. When off, the button is hidden everywhere.
@@ -149,6 +152,9 @@ Fields on a puzzle:
 
 - **Šifrovačka** — which hunt this puzzle belongs to. On creation the
   picker only lists active hunts.
+- **Otevře se se startem** (`opens_at_start`) — the puzzle is opened by
+  the hunt's start code instead of its own arrival code. Needs a start
+  code on the hunt and must have no prerequisites.
 - **Identifikátor** (`display_id`) — a free-form short string (e.g.
   `P1`, `A`, `F03`). Unique within the hunt; used by CSV
   prerequisites.
@@ -158,7 +164,8 @@ Fields on a puzzle:
 - **Název** — display name shown to teams.
 - **Příchozí kód** (arrival code) — the string a team types to *start*
   the puzzle (typically printed on the physical puzzle). Unique within
-  the hunt; matched case-insensitively at play time.
+  the hunt; matched case-insensitively at play time. May be left blank
+  only for *Otevře se se startem* puzzles.
 - **Heslo** (solution code) — the answer the team submits. Matched
   case-insensitively against the team's submission, with a 1-minute
   cooldown after a wrong answer.
@@ -171,10 +178,32 @@ Fields on a puzzle:
   rejects edges that would create a cycle. The CSV importer also
   refuses cycles. A puzzle can only be activated once *all* its
   prerequisites are solved or skipped.
+- **Zpráva po odemčení** (`unlock_message`) — shown on the team's Active
+  tab as soon as all of the puzzle's prerequisites are solved or skipped
+  and until the team arrives at it. Typically where to find the puzzle
+  and its arrival code.
 - **Nápovědy** — up to 3 hints, edited inline. Each has a text and a
   cost. The cost field's label switches between "bodů" and "minut" to
   match the hunt's scoring type. Hints must be numbered 1..N without
   gaps (allowed sets: `{}`, `{1}`, `{1,2}`, `{1,2,3}`).
+
+#### Hunt with a common start (intro puzzles, then linear)
+
+Example: 4 small intro puzzles, then a linear chain, scored by time.
+
+1. Create the hunt with scoring type **Čas** and set a **Startovní heslo**.
+2. Create the intro puzzles I1–I4 with *Otevře se se startem* ticked, a
+   password each, no arrival code and no prerequisites.
+3. Create the first linear puzzle with I1–I4 as prerequisites, an arrival
+   code, and a *Zpráva po odemčení* (where to go, which code to enter).
+4. Each following puzzle has the previous one as its only prerequisite
+   and its own *Zpráva po odemčení*.
+
+Play: a team enters the start code, all intro puzzles open together and
+the clock starts. Once every intro password is entered, the unlock
+message of the first linear puzzle appears; the team goes there and
+enters its arrival code, and so on. The start code works once per team.
+`max_active_puzzles` does not apply to the intro puzzles.
 
 ### Teams
 

@@ -34,7 +34,7 @@ PUZZLE_REQUIRED_COLUMNS = {
     "hint3_text",
     "hint3_cost",
 }
-PUZZLE_OPTIONAL_COLUMNS = {"arrival_message"}
+PUZZLE_OPTIONAL_COLUMNS = {"arrival_message", "opens_at_start", "unlock_message"}
 PUZZLE_COLUMNS = PUZZLE_REQUIRED_COLUMNS | PUZZLE_OPTIONAL_COLUMNS
 
 TEAM_COLUMNS = {"name", "password"}
@@ -52,6 +52,10 @@ class CsvImportError(Exception):
 class ImportResult:
     created: int = 0
     notes: list[str] = field(default_factory=list)
+
+
+_TRUE_VALUES = {"1", "true", "yes", "y", "ano", "a"}
+_FALSE_VALUES = {"", "0", "false", "no", "n", "ne"}
 
 
 def _decode(file) -> str:
@@ -141,9 +145,31 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
         name = row.get("name", "")
         if not name:
             errors.append(f"Row {rn}: name is required")
+
+        opens_raw = (row.get("opens_at_start") or "").strip().casefold()
+        if opens_raw in _TRUE_VALUES:
+            opens_at_start = True
+        elif opens_raw in _FALSE_VALUES:
+            opens_at_start = False
+        else:
+            errors.append(
+                f"Row {rn}: opens_at_start must be yes/no (or 1/0), got {opens_raw!r}"
+            )
+            opens_at_start = False
+        if opens_at_start and not puzzlehunt.start_code:
+            errors.append(
+                f"Row {rn}: opens_at_start needs a start code — set one on the hunt first"
+            )
+        if opens_at_start and row.get("prerequisites", ""):
+            errors.append(f"Row {rn}: a puzzle with opens_at_start cannot have prerequisites")
+
         arrival_code = row.get("arrival_code", "")
         if not arrival_code:
-            errors.append(f"Row {rn}: arrival_code is required")
+            if not opens_at_start:
+                errors.append(f"Row {rn}: arrival_code is required")
+        elif puzzlehunt.start_code and arrival_code.casefold() == puzzlehunt.start_code.strip().casefold():
+            errors.append(f"Row {rn}: arrival_code must differ from the hunt's start code")
+            continue
         elif arrival_code in seen_arrival_codes:
             errors.append(
                 f"Row {rn}: arrival_code {arrival_code!r} already in use in this hunt"
@@ -232,6 +258,8 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
                 "name": name,
                 "arrival_code": arrival_code,
                 "arrival_message": row.get("arrival_message", ""),
+                "opens_at_start": opens_at_start,
+                "unlock_message": row.get("unlock_message", ""),
                 "password": password,
                 "base_points": base_points,
                 "solve_message": row.get("solve_message", ""),
@@ -269,6 +297,8 @@ def import_puzzles(file, *, puzzlehunt) -> ImportResult:
                 name=p["name"],
                 arrival_code=p["arrival_code"],
                 arrival_message=p["arrival_message"],
+                opens_at_start=p["opens_at_start"],
+                unlock_message=p["unlock_message"],
                 password=p["password"],
                 base_points=p["base_points"],
                 solve_message=p["solve_message"],

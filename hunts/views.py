@@ -45,6 +45,8 @@ def active_view(request):
             "rendered_attempts": rendered_attempts,
             "max_active": team.puzzlehunt.max_active_puzzles,
             "active_count": len(active_attempts),
+            "unlock_notices": game.get_unlock_notices(team),
+            "has_started": team.puzzle_attempts.exists(),
         },
     )
 
@@ -97,14 +99,15 @@ def contact_view(request):
 def arrive_view(request):
     code = request.POST.get("arrival_code", "")
     try:
-        attempt = game.enter_arrival_code(request.team, code)
+        attempts = game.enter_arrival_code(request.team, code)
     except game.GameError as e:
         messages.error(request, str(e))
     else:
-        if attempt.puzzle.arrival_message:
-            msg = attempt.puzzle.arrival_message
+        if len(attempts) == 1 and not attempts[0].puzzle.opens_at_start:
+            puzzle = attempts[0].puzzle
+            msg = puzzle.arrival_message or f"Dorazili jste k „{puzzle.name}“."
         else:
-            msg = f"Dorazili jste k „{attempt.puzzle.name}“."
+            msg = f"Hra začala! Otevřeno šifer: {len(attempts)}."
         messages.success(request, msg)
     return redirect("hunts:active")
 

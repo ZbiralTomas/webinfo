@@ -75,14 +75,63 @@ def cooldown_remaining(team, puzzle) -> int:
 # ---------------------------------------------------------------------------
 
 
-def enter_arrival_code(team, code: str) -> PuzzleAttempt:
+def get_unlock_notices(team) -> list[Puzzle]:
+    """Puzzles the team has unlocked (all prerequisites finished) but not yet
+    arrived at, and that carry an `unlock_message` to show them."""
+    attempted = set(team.puzzle_attempts.values_list("puzzle_id", flat=True))
+    finished = set(
+        team.puzzle_attempts
+        .exclude(solved_at__isnull=True, skipped=False)
+        .values_list("puzzle_id", flat=True)
+    )
+    notices = []
+    puzzles = (
+        team.puzzlehunt.puzzles
+        .exclude(unlock_message="")
+        .prefetch_related("prerequisites")
+    )
+    for p in puzzles:
+        if p.pk in attempted:
+            continue
+        prereq_ids = {q.pk for q in p.prerequisites.all()}
+        if prereq_ids and prereq_ids <= finished:
+            notices.append(p)
+    return notices
+
+
+def _start_hunt(team) -> list[PuzzleAttempt]:
+    """Open every `opens_at_start` puzzle at once. Not subject to
+    `max_active_puzzles`; this is what starts the team's clock."""
+    if team.puzzle_attempts.exists():
+        raise GameError("Hra už začala.")
+    start_puzzles = list(team.puzzlehunt.puzzles.filter(opens_at_start=True))
+    if not start_puzzles:
+        raise GameError("Tato šifrovačka nemá žádné úvodní šifry.")
+    with transaction.atomic():
+        return [PuzzleAttempt.objects.create(team=team, puzzle=p) for p in start_puzzles]
+
+
+def enter_arrival_code(team, code: str) -> list[PuzzleAttempt]:
+    """Handle the code field on the Active tab.
+
+    Returns the attempts that were opened: one for a normal arrival code,
+    several for the hunt's start code.
+    """
     code_norm = _normalize(code)
     if not code_norm:
         raise GameError("Zadej příchozí kód.")
 
+    if team.puzzlehunt.start_code and _normalize(team.puzzlehunt.start_code) == code_norm:
+        return _start_hunt(team)
+
     # Find the puzzle in this hunt with a matching arrival_code (case-insensitive).
     puzzle = next(
-        (p for p in team.puzzlehunt.puzzles.all() if _normalize(p.arrival_code) == code_norm),
+        (
+            p for p in team.puzzlehunt.puzzles.all()
+            if not p.opens_at_start
+            and p.arrival_code
+            and _normalize(p.arrival_code) == code_norm
+        ),
         None,
     )
     if puzzle is None:
@@ -122,7 +171,7 @@ def enter_arrival_code(team, code: str) -> PuzzleAttempt:
                 "Před otevřením další jednu vyřeš nebo přeskoč."
             )
 
-    return PuzzleAttempt.objects.create(team=team, puzzle=puzzle)
+    return [PuzzleAttempt.objects.create(team=team, puzzle=puzzle)]
 
 
 # ---------------------------------------------------------------------------

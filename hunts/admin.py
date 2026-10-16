@@ -32,6 +32,17 @@ class PuzzlehuntForm(forms.ModelForm):
                 "hint3_min_minutes",
                 "Musí být alespoň tak velké jako práh 2. nápovědy.",
             )
+        start_code = (cleaned.get("start_code") or "").strip().casefold()
+        if start_code and self.instance.pk:
+            clash = [
+                p for p in self.instance.puzzles.all()
+                if p.arrival_code.strip().casefold() == start_code
+            ]
+            if clash:
+                self.add_error(
+                    "start_code",
+                    f"Shoduje se s příchozím kódem šifry {clash[0]}.",
+                )
         return cleaned
 
 
@@ -64,7 +75,7 @@ class PuzzlehuntAdmin(admin.ModelAdmin):
         ),
         (
             "Pravidla hry",
-            {"fields": ("allow_skip", "show_total_count", "max_active_puzzles")},
+            {"fields": ("start_code", "allow_skip", "show_total_count", "max_active_puzzles")},
         ),
     )
     inlines = [ContactInline]
@@ -228,6 +239,15 @@ class PuzzleForm(forms.ModelForm):
         model = Puzzle
         fields = "__all__"
 
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("opens_at_start") and cleaned.get("prerequisites"):
+            self.add_error(
+                "prerequisites",
+                "Šifra, která se otevírá se startem, nesmí mít předpoklady.",
+            )
+        return cleaned
+
     def clean_prerequisites(self):
         prereqs = self.cleaned_data.get("prerequisites")
         if not prereqs:
@@ -304,8 +324,14 @@ class PuzzleAdmin(admin.ModelAdmin):
     inlines = [HintInline]
     fieldsets = (
         ("Identifikace", {"fields": ("puzzlehunt", "display_id", "order", "name")}),
-        ("Řešení", {"fields": ("arrival_code", "arrival_message", "password", "base_points", "solve_message")}),
-        ("Předpoklady", {"fields": ("prerequisites",)}),
+        (
+            "Řešení",
+            {"fields": (
+                "opens_at_start", "arrival_code", "arrival_message",
+                "password", "base_points", "solve_message",
+            )},
+        ),
+        ("Předpoklady", {"fields": ("prerequisites", "unlock_message")}),
     )
 
     class Media:
