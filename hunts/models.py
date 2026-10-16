@@ -37,6 +37,11 @@ class Puzzlehunt(models.Model):
         validators=[MinValueValidator(1)],
         help_text="Volitelné. Od startu se týmu každých N minut připíše jedno přeskočení, které může využít na libovolnou úvodní šifru (otevřenou se startem). Nevyužitá přeskočení se hromadí. U úvodních šifer pak rozhoduje jen tento časovač, ne volba „povolit přeskočení“. Prázdné = vypnuto.",
     )
+    strict_arrival_codes = models.BooleanField(
+        "přísné příchozí kódy",
+        default=False,
+        help_text="Zapnuto: příchozí kódy se porovnávají přesně, tedy s rozlišením velkých a malých písmen i české diakritiky. Vypnuto (výchozí): velikost písmen a diakritika se ignorují.",
+    )
     is_active = models.BooleanField("aktivní", default=True)
     created_at = models.DateTimeField("vytvořeno", auto_now_add=True)
 

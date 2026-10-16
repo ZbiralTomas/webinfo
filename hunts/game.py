@@ -36,6 +36,12 @@ def _normalize_password(s: str) -> str:
     return unicodedata.normalize("NFC", (s or "").strip()).casefold()
 
 
+def _normalize_exact(s: str) -> str:
+    """Exact form for strict arrival codes: keeps case and diacritics, only
+    trims whitespace and unifies composed/decomposed accents."""
+    return unicodedata.normalize("NFC", (s or "").strip())
+
+
 class GameError(Exception):
     pass
 
@@ -133,13 +139,18 @@ def enter_arrival_code(team, code: str) -> list[PuzzleAttempt]:
     if start_code and _normalize_password(start_code) == _normalize_password(code):
         return _start_hunt(team)
 
-    # Find the puzzle in this hunt with a matching arrival_code (case-insensitive).
+    # Find the puzzle in this hunt with a matching arrival_code. Lenient by
+    # default; exact (case + diacritics) when the hunt is set to strict.
+    if team.puzzlehunt.strict_arrival_codes:
+        typed, same = _normalize_exact(code), _normalize_exact
+    else:
+        typed, same = code_norm, _normalize
     puzzle = next(
         (
             p for p in team.puzzlehunt.puzzles.all()
             if not p.opens_at_start
             and p.arrival_code
-            and _normalize(p.arrival_code) == code_norm
+            and same(p.arrival_code) == typed
         ),
         None,
     )

@@ -169,6 +169,50 @@ class DiacriticsTests(TestCase):
         self.assertEqual(len(game.enter_arrival_code(team, "prichod")), 1)
 
 
+class StrictArrivalCodeTests(TestCase):
+    def _setup(self, strict):
+        hunt = Puzzlehunt.objects.create(
+            name="K", scoring_type="time", strict_arrival_codes=strict
+        )
+        puzzle = Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="A", name="A", arrival_code="Příchod", password="x"
+        )
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        return puzzle, team
+
+    def test_default_is_lenient(self):
+        self.assertFalse(Puzzlehunt._meta.get_field("strict_arrival_codes").default)
+        puzzle, team = self._setup(strict=False)
+        self.assertEqual(len(game.enter_arrival_code(team, "PRICHOD")), 1)
+
+    def test_strict_rejects_wrong_case(self):
+        puzzle, team = self._setup(strict=True)
+        with self.assertRaises(game.GameError):
+            game.enter_arrival_code(team, "příchod")
+
+    def test_strict_rejects_missing_diacritics(self):
+        puzzle, team = self._setup(strict=True)
+        with self.assertRaises(game.GameError):
+            game.enter_arrival_code(team, "Prichod")
+
+    def test_strict_accepts_exact_code_with_whitespace_and_nfd(self):
+        import unicodedata
+
+        puzzle, team = self._setup(strict=True)
+        typed = "  " + unicodedata.normalize("NFD", "Příchod") + " "
+        self.assertEqual([a.puzzle for a in game.enter_arrival_code(team, typed)], [puzzle])
+
+    def test_strict_keeps_distinct_codes_apart(self):
+        hunt = Puzzlehunt.objects.create(
+            name="K2", scoring_type="time", strict_arrival_codes=True
+        )
+        a = Puzzle.objects.create(puzzlehunt=hunt, display_id="A", name="A", arrival_code="Kód", password="x")
+        b = Puzzle.objects.create(puzzlehunt=hunt, display_id="B", name="B", arrival_code="kod", password="y")
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        self.assertEqual(game.enter_arrival_code(team, "kod")[0].puzzle, b)
+        self.assertEqual(game.enter_arrival_code(team, "Kód")[0].puzzle, a)
+
+
 class IntroSkipTimerTests(TestCase):
     def _age_start(self, team, minutes):
         """Pretend the team started `minutes` ago."""

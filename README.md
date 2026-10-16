@@ -132,6 +132,9 @@ A *Puzzlehunt* is the container for one event. Fields:
   skips are available and when the next one arrives. For intro puzzles
   this timer replaces *Povolit přeskočení*; other puzzles still follow
   *Povolit přeskočení*. Blank = timer off.
+- **Přísné příchozí kódy** (`strict_arrival_codes`) — off by default.
+  When on, arrival codes must be typed exactly, including letter case
+  and Czech diacritics.
 - **Povolit přeskočení** — when on, teams see a "Přeskočit" button on
   active puzzles. Skipped puzzles count as finished but contribute no
   points. When off, the button is hidden everywhere.
@@ -323,7 +326,11 @@ Three tabs, switched by a nav strip below the head:
 - Passwords (puzzle answers and the hunt's start code) are compared
   case-insensitively but **respect Czech diacritics** (`příklad` ≠
   `priklad`); composed and decomposed accents are treated as equal.
-- Arrival codes are compared ignoring both case and diacritics.
+- Arrival codes are compared ignoring both case and diacritics by
+  default. Tick **Přísné příchozí kódy** (`strict_arrival_codes`) on the
+  hunt to compare them exactly instead (case- and diacritics-sensitive;
+  only whitespace and composed/decomposed accents are normalised). This
+  does not affect the start code or puzzle answers.
 - All comparisons trim surrounding whitespace.
 
 Scoring is computed on read (`hunts/scoring.py`) — there is no counter
