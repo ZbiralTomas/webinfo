@@ -20,7 +20,7 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 | `opens_at_start` | no      | `yes`/`ano`/`1` → the puzzle is opened by the hunt's start code (set it on the hunt first). Must have no `prerequisites`. Blank = no. |
 | `unlock_message` | no      | Free text shown to the team once all `prerequisites` are finished, until they arrive at the puzzle (e.g. where to find it and its arrival code). Quote if it contains commas. |
 | `arrival_message` | no     | Free text shown to the team as soon as they arrive at the puzzle (and later in the puzzle card / history). Quote if it contains commas. |
-| `password`      | yes      | Answer. Comparison ignores case and diacritics at solve time.          |
+| `password`      | yes      | Answer. Comparison ignores case but **respects diacritics** (`é` ≠ `e`). |
 | `base_points`   | no       | Points awarded when this puzzle is solved (points-based hunts only). Defaults to 10. |
 | `prerequisites` | no       | Semicolon-separated display_ids, e.g. `P1;P2`.                         |
 | `solve_message` | no       | Free text shown after a correct solve. Quote if it contains commas.    |

@@ -175,7 +175,8 @@ Fields on a puzzle:
   the hunt; matched case-insensitively at play time. May be left blank
   only for *Otevře se se startem* puzzles.
 - **Heslo** (solution code) — the answer the team submits. Matched
-  case-insensitively against the team's submission, with a 1-minute
+  case-insensitively but **diacritics-sensitive** (`é` ≠ `e`) against the
+  team's submission, with a 1-minute
   cooldown after a wrong answer.
 - **Základní body** (`base_points`) — points awarded when this puzzle
   is solved. Only used in *points* hunts; ignored in time hunts.
@@ -319,8 +320,11 @@ Three tabs, switched by a nav strip below the head:
 - `max_active_puzzles` cap on simultaneously-active puzzles.
 - Prerequisites must be solved or skipped before a puzzle can be
   activated.
-- Arrival code and answer comparisons are case-insensitive after
-  trimming whitespace.
+- Passwords (puzzle answers and the hunt's start code) are compared
+  case-insensitively but **respect Czech diacritics** (`příklad` ≠
+  `priklad`); composed and decomposed accents are treated as equal.
+- Arrival codes are compared ignoring both case and diacritics.
+- All comparisons trim surrounding whitespace.
 
 Scoring is computed on read (`hunts/scoring.py`) — there is no counter
 to keep in sync, so manual corrections in admin are safe.

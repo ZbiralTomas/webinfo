@@ -22,10 +22,18 @@ COOLDOWN_SECONDS = 60
 
 
 def _normalize(s: str) -> str:
+    """Lenient form for arrival codes: ignores case and diacritics."""
     s = (s or "").strip().casefold()
     # NFD splits accented chars into base + combining marks; drop the marks so
     # "Příklad" matches "priklad".
     return "".join(c for c in unicodedata.normalize("NFD", s) if not unicodedata.combining(c))
+
+
+def _normalize_password(s: str) -> str:
+    """Strict form for passwords (answers, start code): ignores case but
+    keeps diacritics. NFC makes composed and decomposed accents equal, so
+    "é" typed on any keyboard/OS compares the same."""
+    return unicodedata.normalize("NFC", (s or "").strip()).casefold()
 
 
 class GameError(Exception):
@@ -121,7 +129,8 @@ def enter_arrival_code(team, code: str) -> list[PuzzleAttempt]:
     if not code_norm:
         raise GameError("Zadej příchozí kód.")
 
-    if team.puzzlehunt.start_code and _normalize(team.puzzlehunt.start_code) == code_norm:
+    start_code = team.puzzlehunt.start_code
+    if start_code and _normalize_password(start_code) == _normalize_password(code):
         return _start_hunt(team)
 
     # Find the puzzle in this hunt with a matching arrival_code (case-insensitive).
@@ -203,7 +212,7 @@ def submit_answer(team, puzzle_id: int, answer: str) -> AnswerResult:
             f"než znovu odpovíš na „{puzzle.name}“."
         )
 
-    correct = _normalize(answer) == _normalize(puzzle.password)
+    correct = _normalize_password(answer) == _normalize_password(puzzle.password)
     # Save the AnswerAttempt — model save() will auto-flip the PuzzleAttempt
     # to solved if `correct=True`.
     AnswerAttempt.objects.create(

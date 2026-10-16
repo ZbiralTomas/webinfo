@@ -108,6 +108,67 @@ class StartCodeFlowTests(TestCase):
         self.assertEqual([a.puzzle for a in game.enter_arrival_code(team, "ac")], [p])
 
 
+class DiacriticsTests(TestCase):
+    def _team(self, password="příklad", **puzzle_kwargs):
+        hunt = Puzzlehunt.objects.create(
+            name="D", scoring_type="time", start_code="Začátek"
+        )
+        puzzle = Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="A", name="A", arrival_code="Příchod",
+            password=password, **puzzle_kwargs,
+        )
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        return hunt, puzzle, team
+
+    def _expire_cooldown(self, team):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        team.answer_attempts.update(submitted_at=timezone.now() - timedelta(minutes=5))
+
+    def test_answer_without_diacritics_is_wrong(self):
+        hunt, puzzle, team = self._team()
+        game.enter_arrival_code(team, "Příchod")
+        self.assertFalse(game.submit_answer(team, puzzle.pk, "priklad").correct)
+        self._expire_cooldown(team)
+        self.assertFalse(game.submit_answer(team, puzzle.pk, "příklád").correct)
+        self._expire_cooldown(team)
+        self.assertTrue(game.submit_answer(team, puzzle.pk, "příklad").correct)
+
+    def test_answer_is_still_case_insensitive(self):
+        hunt, puzzle, team = self._team()
+        game.enter_arrival_code(team, "Příchod")
+        self.assertTrue(game.submit_answer(team, puzzle.pk, "  PŘÍKLAD ").correct)
+
+    def test_decomposed_accents_match_composed(self):
+        import unicodedata
+
+        hunt, puzzle, team = self._team()
+        game.enter_arrival_code(team, "Příchod")
+        typed = unicodedata.normalize("NFD", "příklad")
+        self.assertNotEqual(typed, "příklad")
+        self.assertTrue(game.submit_answer(team, puzzle.pk, typed).correct)
+
+    def test_start_code_respects_diacritics(self):
+        hunt, puzzle, team = self._team()
+        with self.assertRaises(game.GameError):
+            game.enter_arrival_code(team, "zacatek")
+        self.assertEqual(game.get_active_attempts(team).count(), 0)
+
+    def test_start_code_with_diacritics_works(self):
+        hunt = Puzzlehunt.objects.create(name="S", scoring_type="time", start_code="Začátek")
+        Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="I", name="I", password="x", opens_at_start=True
+        )
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        self.assertEqual(len(game.enter_arrival_code(team, "ZAČÁTEK")), 1)
+
+    def test_arrival_code_still_ignores_diacritics(self):
+        hunt, puzzle, team = self._team()
+        self.assertEqual(len(game.enter_arrival_code(team, "prichod")), 1)
+
+
 class IntroSkipTimerTests(TestCase):
     def _age_start(self, team, minutes):
         """Pretend the team started `minutes` ago."""
