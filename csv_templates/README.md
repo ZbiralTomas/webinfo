@@ -16,7 +16,7 @@ Both files are UTF-8, comma-delimited, standard CSV quoting.
 | `display_id`    | yes      | Unique within hunt. Free-form string.                                  |
 | `order`         | no       | Integer. Blank → auto-assigned to lowest unused.                       |
 | `name`          | yes      |                                                                        |
-| `arrival_code`  | yes*     | Unique within hunt. Comparison ignores case and diacritics at arrival, unless the hunt has *Přísné příchozí kódy* on (then exact). *May be blank only when `opens_at_start` is yes. |
+| `arrival_code`  | yes*     | Unique within hunt. Comparison ignores case, and ignores diacritics unless the hunt has *Příchozí kódy rozlišují diakritiku* on. *May be blank only when `opens_at_start` is yes. |
 | `opens_at_start` | no      | `yes`/`ano`/`1` → the puzzle is opened by the hunt's start code (set it on the hunt first). Must have no `prerequisites`. Blank = no. |
 | `unlock_message` | no      | Free text shown to the team once all `prerequisites` are finished, until they arrive at the puzzle (e.g. where to find it and its arrival code). Quote if it contains commas. |
 | `arrival_message` | no     | Free text shown to the team as soon as they arrive at the puzzle (and later in the puzzle card / history). Quote if it contains commas. |
