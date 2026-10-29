@@ -135,6 +135,11 @@ A *Puzzlehunt* is the container for one event. Fields:
 - **Příchozí kódy rozlišují diakritiku** (`arrival_codes_diacritics`) —
   off by default. When on, arrival codes must be typed with the correct
   Czech diacritics (`kód` ≠ `kod`). Letter case is never significant.
+- **Minuty do přeskočení** (`skip_min_minutes`) — with *Povolit
+  přeskočení* on, the "Přeskočit" button on a puzzle opens only this many
+  minutes after the team arrived at it ("totálka", e.g. 90). Until then
+  the card shows a countdown. 0 (default) = skip any time. Does not apply
+  to intro puzzles governed by the skip timer above.
 - **Povolit přeskočení** — when on, teams see a "Přeskočit" button on
   active puzzles. Skipped puzzles count as finished but contribute no
   points. When off, the button is hidden everywhere.

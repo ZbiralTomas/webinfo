@@ -345,13 +345,19 @@ def intro_skip_status(team) -> IntroSkipStatus | None:
     )
 
 
-def can_skip(team, puzzle) -> bool:
-    """Whether the Skip button should be offered for this puzzle."""
+def skip_wait_seconds(hunt, attempt) -> int:
+    """Seconds until the hunt's time-gated skip opens for this attempt (0 = open now)."""
+    unlock_at = attempt.arrived_at + timedelta(minutes=hunt.skip_min_minutes)
+    return max(0, int((unlock_at - timezone.now()).total_seconds()))
+
+
+def can_skip(team, attempt) -> bool:
+    """Whether the Skip button should be offered for this active attempt."""
     hunt = team.puzzlehunt
-    if uses_intro_skip_timer(hunt, puzzle):
+    if uses_intro_skip_timer(hunt, attempt.puzzle):
         status = intro_skip_status(team)
         return status is not None and status.available > 0
-    return hunt.allow_skip
+    return hunt.allow_skip and skip_wait_seconds(hunt, attempt) == 0
 
 
 def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
@@ -359,7 +365,8 @@ def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
     puzzle = hunt.puzzles.filter(pk=puzzle_id).first()
     if puzzle is None:
         raise GameError("Neznámá šifra.")
-    if uses_intro_skip_timer(hunt, puzzle):
+    timed_intro = uses_intro_skip_timer(hunt, puzzle)
+    if timed_intro:
         status = intro_skip_status(team)
         if status is None or status.available < 1:
             mins = ((status.next_in_seconds if status else 0) + 59) // 60
@@ -371,6 +378,12 @@ def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
     attempt = PuzzleAttempt.objects.filter(team=team, puzzle=puzzle).first()
     if attempt is None or not attempt.is_active:
         raise GameError(f"„{puzzle.name}“ není aktuálně aktivní.")
+    if not timed_intro:
+        wait = skip_wait_seconds(hunt, attempt)
+        if wait > 0:
+            raise GameError(
+                f"Přeskočení bude dostupné za ~{(wait + 59) // 60} min."
+            )
     attempt.skipped = True
     attempt.save(update_fields=["skipped"])
     return attempt

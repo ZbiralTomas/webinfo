@@ -42,6 +42,13 @@ def make_opening_hunt(**hunt_kwargs):
     return hunt, intro, l1, l2, team
 
 
+def attempt_of(team, puzzle):
+    """The team's attempt on `puzzle`, created if the team hasn't arrived yet."""
+    from .models import PuzzleAttempt
+
+    return PuzzleAttempt.objects.get_or_create(team=team, puzzle=puzzle)[0]
+
+
 class StartCodeFlowTests(TestCase):
     def test_start_code_opens_all_intro_puzzles_at_once(self):
         hunt, intro, l1, l2, team = make_opening_hunt()
@@ -212,6 +219,73 @@ class ArrivalCodeDiacriticsTests(TestCase):
         self.assertEqual(game.enter_arrival_code(team, "kód")[0].puzzle, a)
 
 
+class TimedSkipTests(TestCase):
+    """Hunt-wide skip that opens `skip_min_minutes` after arriving (the "totálka")."""
+
+    def _setup(self, **hunt_kwargs):
+        hunt = Puzzlehunt.objects.create(
+            name="Totálka", scoring_type="time", allow_skip=True,
+            skip_min_minutes=90, **hunt_kwargs,
+        )
+        puzzle = Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="P1", name="P1", arrival_code="K1", password="x"
+        )
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        game.enter_arrival_code(team, "K1")
+        return hunt, puzzle, team
+
+    def _age(self, team, minutes):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=minutes))
+
+    def test_skip_locked_before_threshold(self):
+        hunt, puzzle, team = self._setup()
+        self._age(team, 89)
+        attempt = team.puzzle_attempts.get()
+        self.assertFalse(game.can_skip(team, attempt))
+        with self.assertRaises(game.GameError) as ctx:
+            game.skip_puzzle(team, puzzle.pk)
+        self.assertIn("~", str(ctx.exception))
+        self.assertFalse(team.puzzle_attempts.get().skipped)
+
+    def test_skip_open_after_threshold(self):
+        hunt, puzzle, team = self._setup()
+        self._age(team, 91)
+        self.assertTrue(game.can_skip(team, team.puzzle_attempts.get()))
+        game.skip_puzzle(team, puzzle.pk)
+        self.assertTrue(team.puzzle_attempts.get().skipped)
+
+    def test_threshold_counts_from_arrival_at_each_puzzle(self):
+        hunt, puzzle, team = self._setup()
+        p2 = Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="P2", name="P2", arrival_code="K2", password="y"
+        )
+        self._age(team, 200)
+        game.enter_arrival_code(team, "K2")  # just arrived, own clock
+        self.assertFalse(game.can_skip(team, team.puzzle_attempts.get(puzzle=p2)))
+        self.assertTrue(game.can_skip(team, team.puzzle_attempts.get(puzzle=puzzle)))
+
+    def test_default_zero_means_skip_anytime(self):
+        hunt, puzzle, team = self._setup()
+        hunt.skip_min_minutes = 0
+        hunt.save()
+        team.refresh_from_db()
+        self.assertTrue(game.can_skip(team, team.puzzle_attempts.get()))
+
+    def test_skip_disabled_when_allow_skip_off(self):
+        hunt, puzzle, team = self._setup()
+        hunt.allow_skip = False
+        hunt.save()
+        team.refresh_from_db()
+        self._age(team, 500)
+        self.assertFalse(game.can_skip(team, team.puzzle_attempts.get()))
+        with self.assertRaises(game.GameError):
+            game.skip_puzzle(team, puzzle.pk)
+
+
 class IntroSkipTimerTests(TestCase):
     def _age_start(self, team, minutes):
         """Pretend the team started `minutes` ago."""
@@ -233,7 +307,7 @@ class IntroSkipTimerTests(TestCase):
         hunt, intro, l1, l2, team = self._started()
         self._age_start(team, 29)
         self.assertEqual(game.intro_skip_status(team).available, 0)
-        self.assertFalse(game.can_skip(team, intro[0]))
+        self.assertFalse(game.can_skip(team, attempt_of(team, intro[0])))
         with self.assertRaises(game.GameError):
             game.skip_puzzle(team, intro[0].pk)
 
@@ -242,7 +316,7 @@ class IntroSkipTimerTests(TestCase):
         self._age_start(team, 31)
         status = game.intro_skip_status(team)
         self.assertEqual(status.available, 1)
-        self.assertTrue(game.can_skip(team, intro[1]))
+        self.assertTrue(game.can_skip(team, attempt_of(team, intro[1])))
         game.skip_puzzle(team, intro[1].pk)  # team picks the second one
         self.assertTrue(team.puzzle_attempts.get(puzzle=intro[1]).skipped)
         self.assertFalse(team.puzzle_attempts.get(puzzle=intro[0]).skipped)
@@ -275,19 +349,19 @@ class IntroSkipTimerTests(TestCase):
     def test_timer_overrides_allow_skip_for_intro_only(self):
         hunt, intro, l1, l2, team = self._started(allow_skip=True)
         # Intro puzzle: timer decides even though allow_skip is on.
-        self.assertFalse(game.can_skip(team, intro[0]))
+        self.assertFalse(game.can_skip(team, attempt_of(team, intro[0])))
         # Other puzzles: allow_skip still applies.
-        self.assertTrue(game.can_skip(team, l1))
+        self.assertTrue(game.can_skip(team, attempt_of(team, l1)))
 
     def test_timer_off_falls_back_to_allow_skip(self):
         hunt, intro, l1, l2, team = make_opening_hunt(allow_skip=True)
         game.enter_arrival_code(team, "START")
         self.assertIsNone(game.intro_skip_status(team))
-        self.assertTrue(game.can_skip(team, intro[0]))
+        self.assertTrue(game.can_skip(team, attempt_of(team, intro[0])))
         hunt.allow_skip = False
         hunt.save()
         team.refresh_from_db()
-        self.assertFalse(game.can_skip(team, intro[0]))
+        self.assertFalse(game.can_skip(team, attempt_of(team, intro[0])))
 
     def test_no_status_before_start(self):
         hunt, intro, l1, l2, team = make_opening_hunt()
@@ -451,3 +525,33 @@ class IntroSkipViewTests(LoginMixin, TestCase):
         resp = self.client.post("/play/skip/", {"puzzle_id": intro[0].pk}, follow=True)
         self.assertContains(resp, "přeskočena")
         self.assertNotContains(resp, "Přeskočit</button>")
+
+
+class TimedSkipViewTests(LoginMixin, TestCase):
+    def test_countdown_then_button(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        hunt = Puzzlehunt.objects.create(
+            name="V", scoring_type="time", allow_skip=True, skip_min_minutes=90
+        )
+        puzzle = Puzzle.objects.create(
+            puzzlehunt=hunt, display_id="P1", name="Prvni", arrival_code="K1", password="x"
+        )
+        team = Team.objects.create(puzzlehunt=hunt, name="T")
+        self._login(team)
+        self.client.post("/play/arrive/", {"arrival_code": "k1"})
+
+        resp = self.client.get("/play/active/")
+        self.assertContains(resp, "Přeskočit lze za ~90 min.")
+        self.assertNotContains(resp, "Přeskočit</button>")
+        resp = self.client.post("/play/skip/", {"puzzle_id": puzzle.pk}, follow=True)
+        self.assertContains(resp, "Přeskočení bude dostupné")
+
+        team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=91))
+        resp = self.client.get("/play/active/")
+        self.assertContains(resp, "Přeskočit</button>")
+        self.assertNotContains(resp, "Přeskočit lze za")
+        resp = self.client.post("/play/skip/", {"puzzle_id": puzzle.pk}, follow=True)
+        self.assertContains(resp, "přeskočena")

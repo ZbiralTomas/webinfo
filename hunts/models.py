@@ -17,6 +17,11 @@ class Puzzlehunt(models.Model):
     hint2_min_minutes = models.PositiveIntegerField("minuty do 2. nápovědy", default=0)
     hint3_min_minutes = models.PositiveIntegerField("minuty do 3. nápovědy", default=0)
     allow_skip = models.BooleanField("povolit přeskočení", default=False)
+    skip_min_minutes = models.PositiveIntegerField(
+        "minuty do přeskočení",
+        default=0,
+        help_text="Po kolika minutách od příchodu na šifru lze šifru přeskočit (tzv. totálka). 0 = kdykoli. Platí jen při zapnutém „povolit přeskočení“.",
+    )
     show_total_count = models.BooleanField("zobrazit celkový počet šifer", default=True)
     max_active_puzzles = models.PositiveIntegerField(
         "max. počet aktivních šifer",

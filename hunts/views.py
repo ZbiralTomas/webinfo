@@ -8,6 +8,14 @@ from accounts.auth import team_required
 from . import game, scoring
 
 
+def skip_in_minutes(hunt, attempt):
+    """Minutes until a time-gated skip opens, or None when there's no wait to show."""
+    if not hunt.allow_skip or game.uses_intro_skip_timer(hunt, attempt.puzzle):
+        return None
+    wait = game.skip_wait_seconds(hunt, attempt)
+    return (wait + 59) // 60 if wait > 0 else None
+
+
 def _common_context(team):
     score = scoring.compute_score(team)
     return {
@@ -35,7 +43,8 @@ def active_view(request):
             "elapsed_minutes": int((timezone.now() - a.arrived_at).total_seconds() // 60),
             "cooldown_seconds": game.cooldown_remaining(team, a.puzzle),
             "hints": game.hint_status_for(team, a),
-            "can_skip": game.can_skip(team, a.puzzle),
+            "can_skip": game.can_skip(team, a),
+            "skip_in_minutes": skip_in_minutes(team.puzzlehunt, a),
         })
     has_active_intro = any(a.puzzle.opens_at_start for a in active_attempts)
     intro_skip = game.intro_skip_status(team) if has_active_intro else None

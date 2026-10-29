@@ -98,6 +98,11 @@
                     </form>
                 </div>
             {% endif %}
+            {% if r.skip_in_minutes %}
+                <div class="actions">
+                    <small style="color:#777;">Přeskočit lze za ~{{ r.skip_in_minutes }} min.</small>
+                </div>
+            {% endif %}
         </div>
     {% endfor %}
 {% else %}
