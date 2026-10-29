@@ -27,7 +27,7 @@
     <div class="arrival-message" style="margin-bottom: 1.5em;">
         Dostupná přeskočení úvodních šifer: <strong>{{ intro_skip.available }}</strong>.
         {% if intro_skip.available %}Tlačítko „Přeskočit“ je na kartě šifry, kterou si vyberete.{% endif %}
-        Další přeskočení za ~{{ intro_skip.next_in_minutes }} min.
+        {% if intro_skip.next_in_minutes is not None %}Další přeskočení za ~{{ intro_skip.next_in_minutes }} min.{% endif %}
     </div>
 {% endif %}
 

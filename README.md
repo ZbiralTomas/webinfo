@@ -124,17 +124,17 @@ A *Puzzlehunt* is the container for one event. Fields:
 - **Startovní heslo** (`start_code`) — optional. When a team enters it
   on the Active tab, every puzzle flagged *Otevře se se startem* opens at
   once and the team's clock starts. See *Hunt with a common start* below.
-- **Interval přeskočení úvodních šifer** (`intro_skip_interval_minutes`)
-  — optional, in minutes. From the moment a team enters the start code,
-  it earns one skip every N minutes (unused skips accumulate) and can
-  spend each on any *Otevře se se startem* puzzle it chooses, via the
-  "Přeskočit" button on that puzzle's card. The Active tab shows how many
-  skips are available and when the next one arrives. For intro puzzles
-  this timer replaces *Povolit přeskočení*; other puzzles still follow
-  *Povolit přeskočení*. Blank = timer off.
-- **Příchozí kódy rozlišují diakritiku** (`arrival_codes_diacritics`) —
-  off by default. When on, arrival codes must be typed with the correct
-  Czech diacritics (`kód` ≠ `kod`). Letter case is never significant.
+- **Časy přeskočení úvodních šifer** (`intro_skip_times`) — optional
+  list of minutes since the start, e.g. `45, 75, 90`. From the moment a
+  team enters the start code, it earns one skip at each listed minute
+  (unused skips accumulate) and can spend each on any *Otevře se se
+  startem* puzzle it chooses, via the "Přeskočit" button on that puzzle's
+  card. With 3 intro puzzles and `45, 75, 90`: after 45 min solving 2 is
+  enough, after 75 min solving 1, after 90 min none. For a uniform
+  interval list the multiples (`30, 60, 90, 120`). The Active tab shows
+  how many skips are available and when the next one arrives. For intro
+  puzzles this schedule replaces *Povolit přeskočení*; other puzzles
+  still follow *Povolit přeskočení*. Blank = off.
 - **Minuty do přeskočení** (`skip_min_minutes`) — with *Povolit
   přeskočení* on, the "Přeskočit" button on a puzzle opens only this many
   minutes after the team arrived at it ("totálka", e.g. 90). Until then
@@ -220,8 +220,9 @@ Play: a team enters the start code, all intro puzzles open together and
 the clock starts. Once every intro password is entered, the unlock
 message of the first linear puzzle appears; the team goes there and
 enters its arrival code, and so on. The start code works once per team.
-Optionally set **Interval přeskočení úvodních šifer** (e.g. 30) so teams
-stuck on an intro puzzle can skip one of their choice every 30 minutes.
+Optionally set **Časy přeskočení úvodních šifer** (e.g. `45, 75, 90`) so
+teams stuck on an intro puzzle can skip one of their choice at those
+minutes after the start.
 `max_active_puzzles` does not apply to the intro puzzles.
 
 ### Teams

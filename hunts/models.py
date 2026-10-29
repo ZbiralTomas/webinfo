@@ -1,6 +1,26 @@
+import re
+
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
 from django.db import models
+
+
+def parse_skip_times(value):
+    """"45, 75,90" -> [45, 75, 90]. Raises ValueError on anything but strictly
+    increasing positive integers; blank gives []."""
+    parts = [x for x in re.split(r"[,;\s]+", (value or "").strip()) if x]
+    times = [int(x) for x in parts]
+    if any(t < 1 for t in times) or any(b <= a for a, b in zip(times, times[1:])):
+        raise ValueError
+    return times
+
+
+def validate_skip_times(value):
+    try:
+        parse_skip_times(value)
+    except ValueError:
+        raise ValidationError(
+            "Zadej minuty oddělené čárkou, kladná čísla vzestupně, např. 45, 75, 90."
+        )
 
 
 class Puzzlehunt(models.Model):
@@ -35,12 +55,12 @@ class Puzzlehunt(models.Model):
         blank=True,
         help_text="Volitelné. Po zadání tohoto hesla se týmu najednou otevřou všechny šifry označené jako „otevře se se startem“. Prázdné = hra nemá společný start.",
     )
-    intro_skip_interval_minutes = models.PositiveIntegerField(
-        "interval přeskočení úvodních šifer (min)",
-        null=True,
+    intro_skip_times = models.CharField(
+        "časy přeskočení úvodních šifer (min)",
+        max_length=100,
         blank=True,
-        validators=[MinValueValidator(1)],
-        help_text="Volitelné. Od startu se týmu každých N minut připíše jedno přeskočení, které může využít na libovolnou úvodní šifru (otevřenou se startem). Nevyužitá přeskočení se hromadí. U úvodních šifer pak rozhoduje jen tento časovač, ne volba „povolit přeskočení“. Prázdné = vypnuto.",
+        validators=[validate_skip_times],
+        help_text="Volitelné. Minuty od startu, ve kterých tým získá jedno přeskočení úvodní šifry (otevřené se startem), oddělené čárkou, např. „45, 75, 90“. Tým pak přeskočí libovolnou úvodní šifru, kterou si vybere. Nevyužitá přeskočení se hromadí. U úvodních šifer rozhodují jen tyto časy, ne volba „povolit přeskočení“. Prázdné = vypnuto.",
     )
     arrival_codes_diacritics = models.BooleanField(
         "příchozí kódy rozlišují diakritiku",
@@ -53,6 +73,11 @@ class Puzzlehunt(models.Model):
     class Meta:
         verbose_name = "šifrovačka"
         verbose_name_plural = "šifrovačky"
+
+    @property
+    def intro_skip_schedule(self):
+        """Minutes since start at which a team earns an intro-puzzle skip."""
+        return parse_skip_times(self.intro_skip_times)
 
     @property
     def hint_unit(self):

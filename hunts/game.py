@@ -313,35 +313,38 @@ def reveal_hint(team, puzzle_id: int, hint_order: int) -> Hint:
 
 @dataclass
 class IntroSkipStatus:
-    available: int          # skips the team can use right now
-    next_in_seconds: int    # until the next skip is earned
+    available: int                    # skips the team can use right now
+    next_in_seconds: int | None       # until the next skip is earned; None = no more to come
 
     @property
-    def next_in_minutes(self) -> int:
+    def next_in_minutes(self) -> int | None:
+        if self.next_in_seconds is None:
+            return None
         return (self.next_in_seconds + 59) // 60
 
 
 def uses_intro_skip_timer(hunt, puzzle) -> bool:
-    return puzzle.opens_at_start and hunt.intro_skip_interval_minutes is not None
+    return puzzle.opens_at_start and bool(hunt.intro_skip_schedule)
 
 
 def intro_skip_status(team) -> IntroSkipStatus | None:
-    """Skip credit for the intro puzzles, or None if the timer is off or the
-    team hasn't started yet. One skip is earned per full interval since the
-    start; unused ones accumulate."""
-    interval = team.puzzlehunt.intro_skip_interval_minutes
-    if interval is None:
+    """Skip credit for the intro puzzles, or None if no schedule is set or the
+    team hasn't started yet. One skip is earned at each scheduled minute since
+    the start; unused ones accumulate."""
+    schedule = team.puzzlehunt.intro_skip_schedule
+    if not schedule:
         return None
     intro_attempts = team.puzzle_attempts.filter(puzzle__opens_at_start=True)
     start = intro_attempts.order_by("arrived_at").values_list("arrived_at", flat=True).first()
     if start is None:
         return None
-    interval_s = interval * 60
     elapsed = max(0, int((timezone.now() - start).total_seconds()))
+    earned = sum(1 for t in schedule if t * 60 <= elapsed)
     used = intro_attempts.filter(skipped=True).count()
+    upcoming = [t * 60 - elapsed for t in schedule if t * 60 > elapsed]
     return IntroSkipStatus(
-        available=max(0, elapsed // interval_s - used),
-        next_in_seconds=interval_s - elapsed % interval_s,
+        available=max(0, earned - used),
+        next_in_seconds=min(upcoming) if upcoming else None,
     )
 
 
@@ -369,7 +372,9 @@ def skip_puzzle(team, puzzle_id: int) -> PuzzleAttempt:
     if timed_intro:
         status = intro_skip_status(team)
         if status is None or status.available < 1:
-            mins = ((status.next_in_seconds if status else 0) + 59) // 60
+            mins = status.next_in_minutes if status else None
+            if mins is None:
+                raise GameError("Už nemáte k dispozici žádné další přeskočení úvodní šifry.")
             raise GameError(
                 f"Přeskočení úvodní šifry zatím není dostupné. Další bude za ~{mins} min."
             )

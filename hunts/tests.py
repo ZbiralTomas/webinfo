@@ -286,6 +286,91 @@ class TimedSkipTests(TestCase):
             game.skip_puzzle(team, puzzle.pk)
 
 
+class IntroSkipScheduleTests(TestCase):
+    """3 intro puzzles; after 45 min 2 solved suffice, after 75 min 1, after 90 min 0."""
+
+    def _started(self):
+        hunt, intro, l1, l2, team = make_opening_hunt()
+        intro_3 = intro[:3]  # make_opening_hunt creates exactly 3 intro puzzles
+        hunt.intro_skip_times = "45, 75, 90"
+        hunt.save()
+        team.refresh_from_db()
+        game.enter_arrival_code(team, "START")
+        return hunt, intro_3, l1, team
+
+    def _age(self, team, minutes):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=minutes))
+
+    def _blocked(self, team):
+        with self.assertRaises(game.GameError):
+            game.enter_arrival_code(team, "L1CODE")
+
+    def test_credits_follow_schedule(self):
+        hunt, intro, l1, team = self._started()
+        expected = {44: 0, 46: 1, 74: 1, 76: 2, 89: 2, 91: 3, 500: 3}
+        for minutes, available in expected.items():
+            self._age(team, minutes)
+            self.assertEqual(game.intro_skip_status(team).available, available, minutes)
+
+    def test_after_45_min_two_solved_are_enough(self):
+        hunt, intro, l1, team = self._started()
+        game.submit_answer(team, intro[0].pk, intro[0].password)
+        game.submit_answer(team, intro[1].pk, intro[1].password)
+        self._blocked(team)
+        self._age(team, 46)
+        game.skip_puzzle(team, intro[2].pk)
+        self.assertEqual(len(game.enter_arrival_code(team, "L1CODE")), 1)
+
+    def test_after_75_min_one_solved_is_enough(self):
+        hunt, intro, l1, team = self._started()
+        game.submit_answer(team, intro[0].pk, intro[0].password)
+        self._age(team, 46)
+        game.skip_puzzle(team, intro[1].pk)
+        with self.assertRaises(game.GameError):
+            game.skip_puzzle(team, intro[2].pk)  # only one credit so far
+        self._blocked(team)
+        self._age(team, 76)
+        game.skip_puzzle(team, intro[2].pk)
+        game.enter_arrival_code(team, "L1CODE")
+
+    def test_after_90_min_nothing_needs_solving(self):
+        hunt, intro, l1, team = self._started()
+        self._age(team, 91)
+        for p in intro:
+            game.skip_puzzle(team, p.pk)
+        game.enter_arrival_code(team, "L1CODE")
+
+    def test_countdown_to_next_and_none_after_last(self):
+        hunt, intro, l1, team = self._started()
+        self._age(team, 10)
+        self.assertEqual(game.intro_skip_status(team).next_in_minutes, 35)
+        self._age(team, 80)
+        self.assertEqual(game.intro_skip_status(team).next_in_minutes, 10)
+        self._age(team, 95)
+        self.assertIsNone(game.intro_skip_status(team).next_in_minutes)
+
+    def test_no_more_skips_once_all_used(self):
+        hunt, intro, l1, team = self._started()
+        self._age(team, 95)
+        for p in intro:
+            game.skip_puzzle(team, p.pk)
+        self.assertEqual(game.intro_skip_status(team).available, 0)
+
+    def test_times_validation(self):
+        hunt = Puzzlehunt(name="V", scoring_type="time")
+        for good in ("", "45", "45, 75,90", "30;60"):
+            hunt.intro_skip_times = good
+            hunt.full_clean()
+        for bad in ("45,45", "90,45", "0,10", "abc", "45,,x", "-5"):
+            hunt.intro_skip_times = bad
+            with self.assertRaises(ValidationError, msg=bad):
+                hunt.full_clean()
+
+
 class IntroSkipTimerTests(TestCase):
     def _age_start(self, team, minutes):
         """Pretend the team started `minutes` ago."""
@@ -295,9 +380,9 @@ class IntroSkipTimerTests(TestCase):
 
         team.puzzle_attempts.update(arrived_at=timezone.now() - timedelta(minutes=minutes))
 
-    def _started(self, interval=30, **kw):
+    def _started(self, times="30, 60, 90, 120", **kw):
         hunt, intro, l1, l2, team = make_opening_hunt(**kw)
-        hunt.intro_skip_interval_minutes = interval
+        hunt.intro_skip_times = times
         hunt.save()
         team.refresh_from_db()
         game.enter_arrival_code(team, "START")
@@ -365,7 +450,7 @@ class IntroSkipTimerTests(TestCase):
 
     def test_no_status_before_start(self):
         hunt, intro, l1, l2, team = make_opening_hunt()
-        hunt.intro_skip_interval_minutes = 30
+        hunt.intro_skip_times = "30, 60, 90, 120"
         hunt.save()
         team.refresh_from_db()
         self.assertIsNone(game.intro_skip_status(team))
@@ -508,7 +593,7 @@ class IntroSkipViewTests(LoginMixin, TestCase):
         from django.utils import timezone
 
         hunt, intro, l1, l2, team = make_opening_hunt()
-        hunt.intro_skip_interval_minutes = 30
+        hunt.intro_skip_times = "30, 60, 90, 120"
         hunt.save()
         self._login(team)
         self.client.post("/play/arrive/", {"arrival_code": "start"})

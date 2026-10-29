@@ -76,7 +76,7 @@ class PuzzlehuntAdmin(admin.ModelAdmin):
         (
             "Pravidla hry",
             {"fields": (
-                "start_code", "arrival_codes_diacritics", "intro_skip_interval_minutes",
+                "start_code", "arrival_codes_diacritics", "intro_skip_times",
                 "allow_skip", "skip_min_minutes", "show_total_count", "max_active_puzzles",
             )},
         ),
